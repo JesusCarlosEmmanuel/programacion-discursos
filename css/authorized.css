@@ -1,0 +1,81 @@
+/* Authorized Module Styles */
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.speaker-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.talk-count {
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-content {
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.talks-section {
+    border-top: 1px solid var(--glass-border);
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+.talk-entry {
+    position: relative;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.remove-talk {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.modal-actions .btn {
+    flex: 1;
+}
+
+.btn-small {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+}

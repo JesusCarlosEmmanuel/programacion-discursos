@@ -1,0 +1,41 @@
+/* Events List Styling */
+.event-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-left: 4px solid var(--primary);
+}
+
+.incoming-view .event-card {
+    border-left-color: var(--secondary);
+}
+
+.event-date {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.event-sub {
+    font-size: 0.85rem;
+    margin: 0.25rem 0;
+}
+
+.event-detail {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+.group-row {
+    display: flex;
+    gap: 1rem;
+}

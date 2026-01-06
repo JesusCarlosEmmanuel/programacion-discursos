@@ -1,0 +1,97 @@
+/* Reports Styling */
+.filter-card {
+    margin-bottom: 1.5rem;
+}
+
+.report-container {
+    background: #0f172a;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    margin-bottom: 1.5rem;
+}
+
+.report-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 0.5rem;
+}
+
+.report-header h3 {
+    font-size: 1.25rem;
+    color: var(--text-main);
+}
+
+.report-header p {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.premium-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.premium-table th {
+    text-align: left;
+    padding: 0.75rem 0.5rem;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--glass-border);
+    text-transform: uppercase;
+    font-size: 0.65rem;
+}
+
+.premium-table td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.6rem;
+}
+
+.badge-out {
+    background: var(--primary);
+    color: white;
+}
+
+.badge-in {
+    background: var(--secondary);
+    color: white;
+}
+
+.td-date {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.td-name {
+    font-weight: 600;
+}
+
+.td-talk {
+    font-style: italic;
+}
+
+.report-actions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 600px) {
+    .premium-table {
+        font-size: 0.7rem;
+    }
+
+    .td-talk {
+        display: none;
+    }
+
+    /* Hide talk title on very small mobile to fit */
+}
