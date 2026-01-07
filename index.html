@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
-    <title>Gestor de Discursantes</title>
+    <title>Programación Discursantes</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/authorized.css">
@@ -35,34 +35,36 @@
         <header class="app-header">
             <div class="logo-container">
                 <span class="logo-icon">🎙️</span>
-                <h1>Speaker Scheduler</h1>
+                <h1>Programación Discursantes</h1>
             </div>
             <nav class="bottom-nav">
-                <button class="nav-item active" onclick="router.navigate('dashboard')" id="nav-dashboard">
+                <button class="nav-item active" onclick="router.navigate('dashboard')" data-page="dashboard"
+                    id="nav-dashboard">
                     <i data-lucide="layout-dashboard"></i>
                     <span>Panel</span>
                 </button>
-                <button class="nav-item" onclick="router.navigate('authorized')" id="nav-authorized">
+                <button class="nav-item" onclick="router.navigate('authorized')" data-page="authorized"
+                    id="nav-authorized">
                     <i data-lucide="users"></i>
                     <span>Autorizados</span>
                 </button>
-                <button class="nav-item" onclick="router.navigate('outgoing')" id="nav-outgoing">
+                <button class="nav-item" onclick="router.navigate('outgoing')" data-page="outgoing" id="nav-outgoing">
                     <i data-lucide="arrow-up-right"></i>
                     <span>Van</span>
                 </button>
-                <button class="nav-item" onclick="router.navigate('incoming')" id="nav-incoming">
+                <button class="nav-item" onclick="router.navigate('incoming')" data-page="incoming" id="nav-incoming">
                     <i data-lucide="arrow-down-left"></i>
                     <span>Vienen</span>
                 </button>
-                <button class="nav-item" onclick="router.navigate('masters')" id="nav-masters">
+                <button class="nav-item" onclick="router.navigate('masters')" data-page="masters" id="nav-masters">
                     <i data-lucide="map-pin"></i>
                     <span>Congs.</span>
                 </button>
-                <button class="nav-item" onclick="router.navigate('reports')" id="nav-reports">
+                <button class="nav-item" onclick="router.navigate('reports')" data-page="reports" id="nav-reports">
                     <i data-lucide="file-text"></i>
                     <span>Informes</span>
                 </button>
-                <button class="nav-item" onclick="router.navigate('data')" id="nav-data">
+                <button class="nav-item" onclick="router.navigate('data')" data-page="data" id="nav-data">
                     <i data-lucide="database"></i>
                     <span>Ajustes</span>
                 </button>
@@ -78,6 +80,7 @@
         <div id="modal-container" class="modal-overlay hidden"></div>
         <div id="smart-scan-container" class="modal-overlay hidden"></div>
         <div id="toast-container"></div>
+        <div id="undo-notification" class="hidden"></div>
     </div>
 
     <!-- App Scripts -->

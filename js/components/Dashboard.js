@@ -197,3 +197,5 @@ export const Dashboard = {
         return "Hola, buena noche";
     }
 };
+
+window.Dashboard = Dashboard;

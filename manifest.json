@@ -1,6 +1,6 @@
 {
-    "name": "Speaker Scheduler",
-    "short_name": "SpeakerApp",
+    "name": "Programación Discursantes",
+    "short_name": "ProgDiscursantes",
     "start_url": "index.html",
     "display": "standalone",
     "background_color": "#0f172a",

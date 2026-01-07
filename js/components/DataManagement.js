@@ -480,3 +480,5 @@ export const DataManagement = {
         a.click();
     }
 };
+
+window.DataManagement = DataManagement;

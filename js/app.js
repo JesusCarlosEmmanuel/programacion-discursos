@@ -27,13 +27,6 @@ class Router {
     }
 
     init() {
-        this.navItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                const page = e.currentTarget.getAttribute('data-page');
-                this.navigate(page);
-            });
-        });
-
         // Default route
         this.navigate('dashboard');
     }
@@ -52,27 +45,11 @@ class Router {
         this.app.innerHTML = '';
 
         // Render Page
-        switch (page) {
-            case 'dashboard':
-                this.app.appendChild(Dashboard.render());
-                break;
-            case 'authorized':
-                this.app.appendChild(Authorized.render());
-                break;
-            case 'outgoing':
-                this.app.appendChild(Outgoing.render());
-                break;
-            case 'incoming':
-                this.app.appendChild(Incoming.render());
-                break;
-            case 'reports':
-                this.app.appendChild(Reports.render());
-                break;
-            case 'data':
-                this.app.appendChild(DataManagement.render());
-                break;
-            default:
-                this.app.appendChild(Dashboard.render());
+        const Component = this.routes[page];
+        if (Component && Component.render) {
+            this.app.appendChild(Component.render());
+        } else {
+            this.app.appendChild(this.routes.dashboard.render());
         }
 
         // Re-initialize icons for new content
@@ -132,5 +109,5 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorBanner = document.getElementById('load-error');
     if (errorBanner) errorBanner.classList.add('hidden');
 
-    new Router();
+    window.router = new Router();
 });
