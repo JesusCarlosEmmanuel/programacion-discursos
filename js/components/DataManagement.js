@@ -90,13 +90,19 @@ export const DataManagement = {
             </section>
 
             <section class="data-section card danger-zone">
-                <h3 style="color:var(--danger)">Copia de Seguridad</h3>
-                <button class="btn btn-secondary" id="btn-export-json">
-                    <i data-lucide="download"></i> Exportar Todo (JSON)
-                </button>
-                <button class="btn btn-danger" id="btn-clear-all" style="margin-top:1rem">
-                    <i data-lucide="trash-2"></i> Borrar Todo el Sistema
-                </button>
+                <h3 style="color:var(--danger)">Copia de Seguridad y Limpieza</h3>
+                <p class="section-desc">Si tienes muchos registros duplicados o la app va lenta, usa Borrar Todo.</p>
+                <div style="display:flex; flex-direction:column; gap:10px">
+                    <button class="btn btn-secondary" id="btn-export-json">
+                        <i data-lucide="download"></i> Exportar Todo (JSON)
+                    </button>
+                    <button class="btn btn-danger" id="btn-clear-all">
+                        <i data-lucide="trash-2"></i> BORRAR TODO EL SISTEMA
+                    </button>
+                    <button class="btn btn-secondary" style="background:#475569; color:white" onclick="window.hardReset()">
+                        <i data-lucide="refresh-cw"></i> Forzar Limpieza de Cache (Safari/Chrome)
+                    </button>
+                </div>
             </section>
         `;
 

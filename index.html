@@ -25,10 +25,13 @@
         <!-- Error reporting for module load issues -->
         <div id="load-error" class="hidden"
             style="padding: 20px; background: #ef4444; color: white; border-radius: 10px; margin: 20px; font-size: 0.9rem;">
-            <h3>⚠️ Error de Carga</h3>
-            <p>Parece que la aplicación no puede cargar sus módulos.</p>
-            <p><strong>IMPORTANTE:</strong> No abras el archivo directamente (haciendo doble clic). Debes usar la
-                dirección <strong>http://192.168.1.68:8000</strong> en tu navegador.</p>
+            <h3>⚠️ Error de Carga / Botones no funcionan</h3>
+            <p>Parece que la aplicación tiene problemas para cargar o hay datos corruptos.</p>
+            <button onclick="window.hardReset()"
+                style="background: white; color: #ef4444; border:none; padding:10px; border-radius:5px; margin: 10px 0; font-weight: bold; cursor:pointer">
+                LIMPIEZA TOTAL Y REINICIO
+            </button>
+            <p style="font-size: 0.8rem">Usa este botón si los botones no reaccionan o ves mucha información basura.</p>
         </div>
 
         <!-- Dashboard Header -->

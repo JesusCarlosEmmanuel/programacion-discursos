@@ -103,6 +103,16 @@ window.showUndo = (msg, callback) => {
     };
 };
 
+// Global exposure for debugging and inline event handlers
+window.State = State;
+window.Dashboard = Dashboard;
+window.Authorized = Authorized;
+window.Outgoing = Outgoing;
+window.Incoming = Incoming;
+window.Reports = Reports;
+window.DataManagement = DataManagement;
+window.Masters = Masters;
+
 // Start the app
 document.addEventListener('DOMContentLoaded', () => {
     // Hide error banner if we got here
@@ -111,3 +121,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.router = new Router();
 });
+
+// Emergency function to clear cache and state
+window.hardReset = () => {
+    if (confirm('¿BORRAR TODO? Esto eliminará todos los datos y reiniciará la app.')) {
+        localStorage.clear();
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+        window.location.reload(true);
+    }
+};
