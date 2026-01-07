@@ -6,9 +6,51 @@ export const DataManagement = {
         container.className = 'data-view';
 
         container.innerHTML = `
-            <div class="view-header">
-                <h2>Gestión de Datos</h2>
+             <div class="view-header">
+                <h2>Ajustes y Datos</h2>
             </div>
+
+            <section class="data-section card">
+                <h3><i data-lucide="home"></i> Perfil de mi Congregación</h3>
+                <p class="section-desc">Datos locales para reportes y mensajes automáticos.</p>
+                <form id="congregation-profile-form" style="margin-top:1rem">
+                    <div class="form-group">
+                        <label>Nombre de la Congregación</label>
+                        <input type="text" id="cong-name" placeholder="Ej: Valle de México">
+                    </div>
+                    <div class="form-group">
+                        <label>Dirección / Domicilio</label>
+                        <input type="text" id="cong-address" placeholder="Ubicación completa">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+                        <div class="form-group">
+                            <label>Coordinador (Nombre)</label>
+                            <input type="text" id="cong-coord-name" placeholder="Nombre">
+                        </div>
+                        <div class="form-group">
+                            <label>Coordinador (Tel)</label>
+                            <input type="tel" id="cong-coord-phone" placeholder="WhatsApp">
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+                        <div class="form-group">
+                            <label>Encargado (Nombre)</label>
+                            <input type="text" id="cong-sched-name" placeholder="Nombre">
+                        </div>
+                        <div class="form-group">
+                            <label>Encargado (Tel)</label>
+                            <input type="tel" id="cong-sched-phone" placeholder="WhatsApp">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Horario Reunión Fin de Semana</label>
+                        <input type="text" id="cong-time" placeholder="Ej: Domingo 10:00 am">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%">
+                        <i data-lucide="save"></i> Guardar Perfil
+                    </button>
+                </form>
+            </section>
 
             <section class="data-section card">
                 <h3><i data-lucide="scan-line"></i> Escáner Inteligente (OCR/PDF)</h3>
@@ -63,6 +105,38 @@ export const DataManagement = {
     },
 
     initEvents(container) {
+        // Congregation Profile
+        const profForm = container.querySelector('#congregation-profile-form');
+        const prof = State.congregation;
+        if (prof) {
+            profForm.querySelector('#cong-name').value = prof.name || '';
+            profForm.querySelector('#cong-address').value = prof.address || '';
+            profForm.querySelector('#cong-coord-name').value = prof.coordinator?.name || '';
+            profForm.querySelector('#cong-coord-phone').value = prof.coordinator?.phone || '';
+            profForm.querySelector('#cong-sched-name').value = prof.scheduler?.name || '';
+            profForm.querySelector('#cong-sched-phone').value = prof.scheduler?.phone || '';
+            profForm.querySelector('#cong-time').value = prof.meetingTime || '';
+        }
+
+        profForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = {
+                name: profForm.querySelector('#cong-name').value,
+                address: profForm.querySelector('#cong-address').value,
+                coordinator: {
+                    name: profForm.querySelector('#cong-coord-name').value,
+                    phone: profForm.querySelector('#cong-coord-phone').value
+                },
+                scheduler: {
+                    name: profForm.querySelector('#cong-sched-name').value,
+                    phone: profForm.querySelector('#cong-sched-phone').value
+                },
+                meetingTime: profForm.querySelector('#cong-time').value
+            };
+            State.updateCongregation(data);
+            window.showToast('Perfil actualizado', 'success');
+        });
+
         // Smart Scan
         container.querySelector('#btn-trigger-scan').addEventListener('click', () => container.querySelector('#smart-scan-input').click());
         container.querySelector('#smart-scan-input').addEventListener('change', (e) => this.handleSmartScan(e));
@@ -128,106 +202,156 @@ export const DataManagement = {
         const modal = document.getElementById('smart-scan-container');
         modal.classList.remove('hidden');
 
-        // Simple heuristic parsing: looking for dates and names
-        const dateRegex = /\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/g;
-        const potentialDates = text.match(dateRegex) || [];
+        // Logic 2.0: Extract multiple blocks
+        const rows = this.parseEngine2(text);
 
         modal.innerHTML = `
-            <div class="modal-content card" style="max-width: 800px">
-                <div style="display:flex; justify-content:space-between; align-items:center">
-                    <h3>Confirmar Datos Extraídos</h3>
+            <div class="modal-content card" style="max-width: 95vw; width: 1000px; height: 90vh; display: flex; flex-direction: column;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem">
+                    <div style="display:flex; align-items:center; gap:10px">
+                        <i data-lucide="scan-eye" style="color:var(--primary)"></i>
+                        <h3>Revisión de Datos (Scanner 2.0)</h3>
+                    </div>
                     <button class="btn btn-secondary btn-small" onclick="document.getElementById('smart-scan-container').classList.add('hidden')">×</button>
                 </div>
-                <p class="section-desc">Se han detectado los siguientes datos. Por favor, revisa y completa los campos faltantes.</p>
                 
-                <div class="smart-parsed-container" style="display:flex; flex-direction:column; gap:1rem">
-                    <div class="form-group">
-                        <label>Tipo de Registro</label>
-                        <select id="smart-type">
-                            <option value="incoming">Visita (Viene)</option>
-                            <option value="outgoing">Salida (Va)</option>
-                        </select>
-                    </div>
-
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-                        <div class="form-group">
-                            <label>Fecha Detectada</label>
-                            <select id="smart-date">
-                                ${potentialDates.map(d => `<option value="${this.formatDate(d)}">${d}</option>`).join('')}
-                                <option value="">Ingresar manualmente...</option>
-                            </select>
-                            <input type="date" id="smart-date-manual" style="margin-top:5px">
-                        </div>
-                        <div class="form-group">
-                            <label>Nombre Detectado</label>
-                            <input type="text" id="smart-name" placeholder="Nombre completo">
-                        </div>
-                    </div>
-
-                    <div class="raw-snippet">
-                        <label>Texto extraído:</label>
-                        <div class="text-raw-view" style="font-size:0.7rem; background:#000; padding:10px; max-height:150px; overflow-y:auto; border-radius:5px">
-                            ${text.replace(/\n/g, '<br>')}
-                        </div>
-                    </div>
+                <div class="table-responsive" style="flex: 1; overflow-y: auto; margin-bottom: 1rem; border: 1px solid var(--text-dim); border-radius: 8px">
+                    <table class="smart-table" style="width: 100%; border-collapse: collapse;">
+                        <thead style="position: sticky; top: 0; background: var(--bg-dark); z-index: 10">
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Fecha</th>
+                                <th>Hora</th>
+                                <th>Nombre</th>
+                                <th>Congregación</th>
+                                <th>Bosquejo</th>
+                                <th>Título</th>
+                                <th>Borrar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="smart-table-body">
+                            ${rows.map((row, idx) => `
+                                <tr data-idx="${idx}">
+                                    <td>
+                                        <select class="s-type">
+                                            <option value="incoming" ${row.type === 'incoming' ? 'selected' : ''}>Viene</option>
+                                            <option value="outgoing" ${row.type === 'outgoing' ? 'selected' : ''}>Van</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="date" class="s-date" value="${row.date}"></td>
+                                    <td><input type="time" class="s-time" value="${row.time || '10:00'}"></td>
+                                    <td><input type="text" class="s-name" value="${row.name}"></td>
+                                    <td><input type="text" class="s-cong" value="${row.congregation}"></td>
+                                    <td><input type="text" class="s-outline" value="${row.outline}"></td>
+                                    <td><input type="text" class="s-title" value="${row.title}"></td>
+                                    <td><button class="btn-icon" onclick="this.closest('tr').remove()"><i data-lucide="trash"></i></button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
                 </div>
 
-                <div class="modal-actions" style="display:flex; gap:1rem; margin-top:1.5rem">
-                    <button class="btn btn-secondary" onclick="document.getElementById('smart-scan-container').classList.add('hidden')" style="flex:1">Cancelar</button>
-                    <button class="btn btn-primary" id="btn-save-parsed" style="flex:1">Guardar Registro</button>
+                <div class="modal-footer" style="padding-top: 1rem; border-top: 1px solid var(--text-dim); display:flex; justify-content: space-between; align-items:center">
+                    <p style="font-size: 0.8rem; color: var(--text-dim)">Se detectaron ${rows.length} registros posibles. Revisa antes de guardar.</p>
+                    <div style="display:flex; gap:1rem">
+                        <button class="btn btn-secondary" onclick="document.getElementById('smart-scan-container').classList.add('hidden')">Cancelar</button>
+                        <button class="btn btn-primary" id="btn-save-batch">Guardar Todo</button>
+                    </div>
                 </div>
             </div>
         `;
 
-        modal.querySelector('#btn-save-parsed').addEventListener('click', () => this.saveSmartRecord());
+        if (window.lucide) window.lucide.createIcons();
+        modal.querySelector('#btn-save-batch').addEventListener('click', () => this.saveBatchRecords());
     },
 
-    saveSmartRecord() {
-        const type = document.getElementById('smart-type').value;
-        const name = document.getElementById('smart-name').value;
-        const dateManual = document.getElementById('smart-date-manual').value;
-        const dateSelect = document.getElementById('smart-date').value;
-        const date = dateManual || dateSelect;
+    parseEngine2(text) {
+        // Advanced Regex Logic for multidimensional parsing
+        const lines = text.split('\n').filter(l => l.trim().length > 5);
+        const results = [];
 
-        if (!name || !date) {
-            window.showToast('Nombre y Fecha son obligatorios', 'warning');
-            return;
+        // Common Patterns
+        const dateRegex = /(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/;
+        const timeRegex = /(\d{1,2}):(\d{2})/;
+        const outlineRegex = /#?\s?(\d{1,3})/;
+
+        lines.forEach(line => {
+            const dateMatch = line.match(dateRegex);
+            if (dateMatch) {
+                // Potential record found
+                const date = this.formatDate(dateMatch[0]);
+                const timeMatch = line.match(timeRegex);
+                const outlineMatch = line.match(outlineRegex);
+
+                // Heuristic: Name is usually the first set of words after date or outline
+                // For now, let's keep it simple and let user edit
+                results.push({
+                    type: line.toLowerCase().includes('van') || line.toLowerCase().includes('visita') ? 'outgoing' : 'incoming',
+                    date: date,
+                    time: timeMatch ? timeMatch[0] : '10:00',
+                    name: '---', // User will edit
+                    congregation: '---',
+                    outline: outlineMatch ? outlineMatch[1] : '---',
+                    title: '---'
+                });
+            }
+        });
+
+        // If no dates found, at least provide one empty row for manual entry
+        if (results.length === 0) {
+            results.push({ type: 'incoming', date: '', time: '10:00', name: '', congregation: '', outline: '', title: '' });
         }
 
-        if (type === 'incoming') {
-            State.addIncomingEvent({
-                id: crypto.randomUUID(),
-                speaker_name: name,
-                speaker_phone: '',
-                congregation_origin: 'Detectado vía Scan',
-                outline_number: '---',
-                talk_title: 'Revisar título',
-                song_number: '---',
-                date,
-                time: '12:00'
-            });
-        } else {
-            // Outgoing requires a valid authorized speaker. We'll try to find or show a warning.
-            const speaker = State.authorized.find(s => s.name.toLowerCase().includes(name.toLowerCase()));
-            if (speaker) {
-                State.addOutgoingEvent({
+        return results;
+    },
+
+    saveBatchRecords() {
+        const rows = document.querySelectorAll('#smart-table-body tr');
+        let count = 0;
+
+        rows.forEach(tr => {
+            const type = tr.querySelector('.s-type').value;
+            const date = tr.querySelector('.s-date').value;
+            const time = tr.querySelector('.s-time').value;
+            const name = tr.querySelector('.s-name').value;
+            const cong = tr.querySelector('.s-cong').value;
+            const outline = tr.querySelector('.s-outline').value;
+            const title = tr.querySelector('.s-title').value;
+
+            if (!name || name === '---') return;
+
+            if (type === 'incoming') {
+                State.addIncomingEvent({
                     id: crypto.randomUUID(),
-                    speaker_id: speaker.id,
-                    outline_number: '---',
-                    talk_title: 'Revisar título',
-                    destination_congregation: 'Detectado vía Scan',
+                    speaker_name: name,
+                    speaker_phone: '',
+                    congregation_origin: cong,
+                    outline_number: outline,
+                    talk_title: title,
+                    song_number: '---',
                     date,
-                    time: '12:00'
+                    time
                 });
             } else {
-                window.showToast('No se encontró un discursante autorizado con ese nombre. Agrégalo primero.', 'danger');
-                return;
+                const speaker = State.authorized.find(s => s.name.toLowerCase().includes(name.toLowerCase()));
+                if (speaker) {
+                    State.addOutgoingEvent({
+                        id: crypto.randomUUID(),
+                        speaker_id: speaker.id,
+                        outline_number: outline,
+                        talk_title: title,
+                        destination_congregation: cong,
+                        date,
+                        time
+                    });
+                }
             }
-        }
+            count++;
+        });
 
         document.getElementById('smart-scan-container').classList.add('hidden');
-        window.showToast('Registro guardado', 'success');
-        document.getElementById(`nav-${type}`).click();
+        window.showToast(`Se guardaron ${count} registros`, 'success');
+        router.navigate('dashboard');
     },
 
     processCSV(container) {

@@ -238,6 +238,93 @@ input:focus {
     border-left-color: var(--warning);
 }
 
+/* Urgency Classes */
+.card-urgent {
+    border-left: 6px solid var(--danger) !important;
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.1), transparent);
+    animation: pulse-danger 2s infinite;
+}
+
+.countdown-urgent {
+    color: var(--danger);
+    font-weight: 800;
+}
+
+@keyframes pulse-danger {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* Bulk Selection UI */
+.selection-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--primary);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.checkbox-custom {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 2px solid var(--text-dim);
+    margin-right: 12px;
+}
+
+/* Undo Banner */
+#undo-notification {
+    position: fixed;
+    bottom: 80px;
+    left: 20px;
+    right: 20px;
+    background: #1e293b;
+    border: 1px solid var(--primary);
+    padding: 1rem;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: var(--glass-shadow);
+}
+
+.btn-undo {
+    color: var(--primary);
+    font-weight: bold;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.undo-timer {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+
 @keyframes slideIn {
     from {
         transform: translateX(100%);

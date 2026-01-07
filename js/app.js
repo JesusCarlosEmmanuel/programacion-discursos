@@ -5,6 +5,7 @@ import { Outgoing } from './components/Outgoing.js';
 import { Incoming } from './components/Incoming.js';
 import { Reports } from './components/Reports.js';
 import { DataManagement } from './components/DataManagement.js';
+import { Masters } from './components/Masters.js';
 
 /**
  * Simple SPA Router
@@ -13,6 +14,15 @@ class Router {
     constructor() {
         this.app = document.getElementById('main-content');
         this.navItems = document.querySelectorAll('.nav-item');
+        this.routes = {
+            dashboard: Dashboard,
+            authorized: Authorized,
+            outgoing: Outgoing,
+            incoming: Incoming,
+            reports: Reports,
+            data: DataManagement,
+            masters: Masters
+        };
         this.init();
     }
 
@@ -73,13 +83,47 @@ class Router {
 }
 
 // Global UI Utils
-window.showToast = (message, type = 'info') => {
-    const container = document.getElementById('toast-container');
+window.showToast = (msg, type = 'info') => {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    container.appendChild(toast);
+    toast.innerText = msg;
+    document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
+};
+
+window.showUndo = (msg, callback) => {
+    const container = document.getElementById('undo-notification');
+    container.classList.remove('hidden');
+    container.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px">
+            <i data-lucide="trash-2"></i>
+            <span>${msg}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:15px">
+            <button class="btn-undo" id="btn-undo-action">DESHACER</button>
+            <div class="undo-timer" id="undo-timer">4</div>
+        </div>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+
+    let timeLeft = 4;
+    const timer = setInterval(() => {
+        timeLeft--;
+        const timerEl = document.getElementById('undo-timer');
+        if (timerEl) timerEl.innerText = timeLeft;
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            container.classList.add('hidden');
+        }
+    }, 1000);
+
+    const undoBtn = document.getElementById('btn-undo-action');
+    undoBtn.onclick = () => {
+        clearInterval(timer);
+        container.classList.add('hidden');
+        callback();
+        window.showToast('Acción revertida', 'info');
+    };
 };
 
 // Start the app

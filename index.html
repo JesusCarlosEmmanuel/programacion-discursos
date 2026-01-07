@@ -38,29 +38,33 @@
                 <h1>Speaker Scheduler</h1>
             </div>
             <nav class="bottom-nav">
-                <button class="nav-item active" data-page="dashboard" id="nav-dashboard">
+                <button class="nav-item active" onclick="router.navigate('dashboard')" id="nav-dashboard">
                     <i data-lucide="layout-dashboard"></i>
-                    <span>Inicio</span>
+                    <span>Panel</span>
                 </button>
-                <button class="nav-item" data-page="outgoing" id="nav-outgoing">
-                    <i data-lucide="arrow-up-right"></i>
-                    <span>Van</span>
-                </button>
-                <button class="nav-item" data-page="incoming" id="nav-incoming">
-                    <i data-lucide="arrow-down-left"></i>
-                    <span>Vienen</span>
-                </button>
-                <button class="nav-item" data-page="authorized" id="nav-authorized">
+                <button class="nav-item" onclick="router.navigate('authorized')" id="nav-authorized">
                     <i data-lucide="users"></i>
                     <span>Autorizados</span>
                 </button>
-                <button class="nav-item" data-page="reports" id="nav-reports">
-                    <i data-lucide="file-text"></i>
-                    <span>Reportes</span>
+                <button class="nav-item" onclick="router.navigate('outgoing')" id="nav-outgoing">
+                    <i data-lucide="arrow-up-right"></i>
+                    <span>Van</span>
                 </button>
-                <button class="nav-item" data-page="data" id="nav-data">
+                <button class="nav-item" onclick="router.navigate('incoming')" id="nav-incoming">
+                    <i data-lucide="arrow-down-left"></i>
+                    <span>Vienen</span>
+                </button>
+                <button class="nav-item" onclick="router.navigate('masters')" id="nav-masters">
+                    <i data-lucide="map-pin"></i>
+                    <span>Congs.</span>
+                </button>
+                <button class="nav-item" onclick="router.navigate('reports')" id="nav-reports">
+                    <i data-lucide="file-text"></i>
+                    <span>Informes</span>
+                </button>
+                <button class="nav-item" onclick="router.navigate('data')" id="nav-data">
                     <i data-lucide="database"></i>
-                    <span>Datos</span>
+                    <span>Ajustes</span>
                 </button>
             </nav>
         </header>

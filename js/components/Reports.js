@@ -11,16 +11,24 @@ export const Reports = {
             </div>
 
             <div class="card filter-card">
-                <div class="form-group-row" style="display:flex; gap:10px; align-items:flex-end">
-                    <div style="flex:1">
+                <div class="form-group-row" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end">
+                    <div style="flex:1; min-width: 120px">
                         <label>Desde</label>
                         <input type="date" id="filter-start">
                     </div>
-                    <div style="flex:1">
+                    <div style="flex:1; min-width: 120px">
                         <label>Hasta</label>
                         <input type="date" id="filter-end">
                     </div>
-                    <button class="btn btn-primary" id="btn-filter">
+                    <div style="flex:1; min-width: 120px">
+                        <label>Tipo</label>
+                        <select id="filter-type">
+                            <option value="all">Todos</option>
+                            <option value="Van">Salidas (Van)</option>
+                            <option value="Viene">Visitas (Vienen)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="btn-filter" style="height: 42px">
                         <i data-lucide="filter"></i>
                     </button>
                 </div>
@@ -65,17 +73,21 @@ export const Reports = {
     generateReport(container) {
         const start = container.querySelector('#filter-start').value;
         const end = container.querySelector('#filter-end').value;
+        const type = container.querySelector('#filter-type').value;
         const reportContent = container.querySelector('#report-content');
         const rangeText = container.querySelector('#report-range-text');
 
-        rangeText.textContent = `${start} al ${end}`;
+        const dateRange = start && end ? `${start} al ${end}` : 'Todo el tiempo';
+        const typeText = type === 'all' ? '' : ` (${type})`;
+        rangeText.textContent = `${dateRange}${typeText}`;
 
         const allEvents = [
             ...State.outgoing.map(e => ({ ...e, type: 'Van' })),
             ...State.incoming.map(e => ({ ...e, type: 'Viene' }))
         ].filter(e => {
-            if (!start || !end) return true;
-            return e.date >= start && e.date <= end;
+            const matchesDate = (!start || !end) ? true : (e.date >= start && e.date <= end);
+            const matchesType = type === 'all' || e.type === type;
+            return matchesDate && matchesType;
         }).sort((a, b) => new Date(a.date) - new Date(b.date));
 
         if (allEvents.length === 0) {
