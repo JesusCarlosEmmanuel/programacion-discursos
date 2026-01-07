@@ -9,12 +9,12 @@ export const Dashboard = {
         const alerts = this.getUpcomingAlerts();
 
         container.innerHTML = `
-    < div class="view-header" >
+            <div class="view-header">
                 <h2>Panel de Control</h2>
                 <div class="congregation-badge">
                     <i data-lucide="home"></i> ${State.congregation?.name || 'Congregación Local'}
                 </div>
-            </div >
+            </div>
 
             <div class="stats-grid">
                 <div class="stat-card">
@@ -47,6 +47,14 @@ export const Dashboard = {
         this.initAutomation(container);
         if (window.lucide) window.lucide.createIcons();
         return container;
+    },
+
+    getStats() {
+        return {
+            outgoing: State.outgoing.length,
+            incoming: State.incoming.length,
+            totalSpeakers: State.authorized.length
+        };
     },
 
     getUpcomingAlerts() {

@@ -7,6 +7,16 @@ import { Reports } from './components/Reports.js';
 import { DataManagement } from './components/DataManagement.js';
 import { Masters } from './components/Masters.js';
 
+// Global exposure for debugging and inline event handlers
+window.State = State;
+window.Dashboard = Dashboard;
+window.Authorized = Authorized;
+window.Outgoing = Outgoing;
+window.Incoming = Incoming;
+window.Reports = Reports;
+window.DataManagement = DataManagement;
+window.Masters = Masters;
+
 /**
  * Simple SPA Router
  */
@@ -23,38 +33,47 @@ class Router {
             data: DataManagement,
             masters: Masters
         };
+        window.router = this;
         this.init();
     }
 
     init() {
-        // Default route
-        this.navigate('dashboard');
+        try {
+            this.navigate('dashboard');
+        } catch (e) {
+            console.error("Router init failed:", e);
+        }
     }
 
     navigate(page) {
-        // Update Nav UI
-        this.navItems.forEach(item => {
-            if (item.getAttribute('data-page') === page) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
+        try {
+            // Update Nav UI
+            this.navItems.forEach(item => {
+                if (item.getAttribute('data-page') === page) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // Clear content
+            this.app.innerHTML = '';
+
+            // Render Page
+            const Component = this.routes[page] || this.routes.dashboard;
+            if (Component && Component.render) {
+                this.app.appendChild(Component.render());
             }
-        });
 
-        // Clear content
-        this.app.innerHTML = '';
-
-        // Render Page
-        const Component = this.routes[page];
-        if (Component && Component.render) {
-            this.app.appendChild(Component.render());
-        } else {
-            this.app.appendChild(this.routes.dashboard.render());
-        }
-
-        // Re-initialize icons for new content
-        if (window.lucide) {
-            window.lucide.createIcons();
+            // Re-initialize icons
+            if (window.lucide) window.lucide.createIcons();
+        } catch (e) {
+            console.error(`Error navigating to ${page}:`, e);
+            this.app.innerHTML = `<div class="card error" style="padding:20px; color:#ef4444">
+                <h3>⚠️ Error al cargar la página</h3>
+                <p>${e.message}</p>
+                <button onclick="window.hardReset()" style="margin-top:10px" class="btn btn-danger">Limpiar y Reiniciar</button>
+            </div>`;
         }
     }
 }
@@ -103,24 +122,14 @@ window.showUndo = (msg, callback) => {
     };
 };
 
-// Global exposure for debugging and inline event handlers
-window.State = State;
-window.Dashboard = Dashboard;
-window.Authorized = Authorized;
-window.Outgoing = Outgoing;
-window.Incoming = Incoming;
-window.Reports = Reports;
-window.DataManagement = DataManagement;
-window.Masters = Masters;
-
 // Start the app
-document.addEventListener('DOMContentLoaded', () => {
-    // Hide error banner if we got here
-    const errorBanner = document.getElementById('load-error');
-    if (errorBanner) errorBanner.classList.add('hidden');
-
-    window.router = new Router();
-});
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        new Router();
+    });
+} else {
+    new Router();
+}
 
 // Emergency function to clear cache and state
 window.hardReset = () => {

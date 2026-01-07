@@ -12,13 +12,23 @@ const STORAGE_KEYS = {
     ORIGINS: 'speaker_app_origins'
 };
 
+const safeParse = (key, fallback = []) => {
+    try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : fallback;
+    } catch (e) {
+        console.error(`Error parsing ${key}:`, e);
+        return fallback;
+    }
+};
+
 export const State = {
-    authorized: JSON.parse(localStorage.getItem(STORAGE_KEYS.AUTHORIZED_SPEAKERS) || '[]'),
-    outgoing: JSON.parse(localStorage.getItem(STORAGE_KEYS.OUTGOING_EVENTS) || '[]'),
-    incoming: JSON.parse(localStorage.getItem(STORAGE_KEYS.INCOMING_EVENTS) || '[]'),
-    congregation: JSON.parse(localStorage.getItem(STORAGE_KEYS.CONGREGATION) || '{}'),
-    destinations: JSON.parse(localStorage.getItem(STORAGE_KEYS.DESTINATIONS) || '[]'),
-    origins: JSON.parse(localStorage.getItem(STORAGE_KEYS.ORIGINS) || '[]'),
+    authorized: safeParse(STORAGE_KEYS.AUTHORIZED_SPEAKERS),
+    outgoing: safeParse(STORAGE_KEYS.OUTGOING_EVENTS),
+    incoming: safeParse(STORAGE_KEYS.INCOMING_EVENTS),
+    congregation: safeParse(STORAGE_KEYS.CONGREGATION, {}),
+    destinations: safeParse(STORAGE_KEYS.DESTINATIONS),
+    origins: safeParse(STORAGE_KEYS.ORIGINS),
     trash: null, // Temporary storage for undo
 
     saveToStorage(key, data) {
