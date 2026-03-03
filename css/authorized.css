@@ -1,81 +1,96 @@
-/* Authorized Module Styles */
-.view-header {
+/* =========================================
+   Authorized Speakers CSS
+   ========================================= */
+
+/* Speaker list container */
+.speaker-list {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
+    flex-direction: column;
+    gap: 0;
 }
 
-.speaker-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+/* Speaker search bar */
+.search-bar {
+    position: relative;
+    margin-bottom: 0.75rem;
 }
 
-.talk-count {
-    font-size: 0.75rem;
-    color: var(--primary);
-    font-weight: 600;
+.search-bar input {
+    padding-left: 2.4rem;
 }
 
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 1rem;
+.search-bar .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--text-dim);
+    pointer-events: none;
 }
 
-.modal-overlay.hidden {
-    display: none;
-}
-
-.modal-content {
-    width: 100%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-
-.talks-section {
-    border-top: 1px solid var(--glass-border);
-    padding-top: 1rem;
-    margin-top: 1rem;
-}
-
+/* Talk entry rows inside modal */
 .talk-entry {
     position: relative;
-    padding: 0.75rem;
-    margin-bottom: 0.75rem;
+    padding: 0.5rem 0;
+}
+
+.talk-field-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 60px 32px;
+    gap: 0.4rem;
+    align-items: center;
     background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.6rem;
+}
+
+.talk-field-row input {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
 }
 
 .remove-talk {
-    position: absolute;
-    top: 5px;
-    right: 5px;
     background: none;
     border: none;
     color: var(--danger);
-    font-size: 1.25rem;
     cursor: pointer;
-}
-
-.modal-actions {
     display: flex;
-    gap: 1rem;
-    margin-top: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem;
+    border-radius: 4px;
+    transition: var(--transition);
 }
 
-.modal-actions .btn {
-    flex: 1;
+.remove-talk:hover {
+    background: rgba(248, 113, 113, 0.1);
 }
 
-.btn-small {
-    padding: 0.5rem;
-    font-size: 0.8rem;
+.remove-talk i {
+    width: 14px;
+    height: 14px;
+}
+
+/* Speaker count chip */
+.speaker-count {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 0.15rem 0.6rem;
+    font-weight: 600;
+}
+
+/* Talks scroll area in modal */
+.talks-scroll-area::-webkit-scrollbar {
+    width: 3px;
+}
+
+.talks-scroll-area::-webkit-scrollbar-thumb {
+    background: var(--primary-dark);
+    border-radius: 3px;
 }

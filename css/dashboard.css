@@ -1,32 +1,145 @@
-/* Dashboard & Alerts Styling */
+/* =========================================
+   Dashboard CSS
+   ========================================= */
+
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* ---- Welcome / Greeting ---- */
 .welcome-section {
-    margin-bottom: 2rem;
+    margin-bottom: 0.5rem;
 }
 
 .welcome-section h2 {
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 800;
+    line-height: 1.2;
+    background: linear-gradient(100deg, var(--text-main) 40%, var(--text-dim));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .welcome-section p {
+    font-size: 0.875rem;
     color: var(--text-dim);
+    margin-top: 0.25rem;
 }
 
+/* ---- Section Title ---- */
 .section-title {
-    font-size: 0.9rem;
+    font-size: 0.72rem;
+    font-weight: 700;
     color: var(--text-dim);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 1rem;
+    letter-spacing: 1.2px;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
 }
 
+.section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--glass-border);
+}
+
+/* ---- Stat Cards Grid ---- */
+.quick-stats,
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+@media (min-width: 380px) {
+
+    .quick-stats,
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.stat-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 1.1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: var(--transition);
+    gap: 0.25rem;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.stat-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.35rem;
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.stat-icon i {
+    width: 18px;
+    height: 18px;
+    color: var(--primary);
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+    letter-spacing: -1px;
+}
+
+.stat-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* ---- Alert Card (upcoming events) ---- */
 .alert-card {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-left: 4px solid var(--primary);
+    gap: 0.75rem;
+    border-left: 3px solid var(--primary);
+    padding: 0.85rem 1rem;
     position: relative;
     overflow: hidden;
+}
+
+.alert-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.05), transparent);
+    pointer-events: none;
 }
 
 .alert-card.border-outgoing {
@@ -37,95 +150,86 @@
     border-left-color: var(--secondary);
 }
 
-.tag {
-    font-size: 0.65rem;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 4px;
-    display: inline-block;
-    margin-bottom: 0.5rem;
-}
-
-.tag-out {
-    background: rgba(99, 102, 241, 0.2);
-    color: var(--primary);
-}
-
-.tag-in {
-    background: rgba(236, 72, 153, 0.2);
-    color: var(--secondary);
+.alert-info {
+    flex: 1;
+    overflow: hidden;
 }
 
 .alert-info h4 {
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .alert-info p {
     font-size: 0.8rem;
     color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .destination {
-    margin-top: 5px;
+    margin-top: 0.2rem;
+    font-size: 0.82rem;
     font-weight: 600;
+    color: #94a3b8;
 }
 
-.btn-whatsapp {
-    background: #25D366;
-    color: white;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8rem;
+/* ---- Tags ---- */
+.tag {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.15rem 0.55rem;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.35rem;
 }
 
-.quick-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-top: 1rem;
+.tag-out {
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--primary);
+    border: 1px solid rgba(99, 102, 241, 0.25);
 }
 
-.stat-card {
-    background: var(--card-bg);
-    border-radius: 16px;
-    padding: 1.5rem;
+.tag-in {
+    background: rgba(244, 114, 182, 0.12);
+    color: var(--secondary);
+    border: 1px solid rgba(244, 114, 182, 0.25);
+}
+
+/* ---- Countdown chips (dashboard alert) ---- */
+.alert-meta {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    border: 1px solid var(--glass-border);
+    align-items: flex-end;
+    gap: 0.4rem;
+    flex-shrink: 0;
 }
 
-.stat-value {
-    font-size: 2rem;
-    font-weight: 700;
+.days-chip {
+    font-size: 1rem;
+    font-weight: 900;
     color: var(--primary);
+    text-align: right;
+    line-height: 1;
 }
 
-.stat-label {
-    font-size: 0.8rem;
+.days-chip span {
+    font-size: 0.65rem;
+    font-weight: 600;
     color: var(--text-dim);
+    display: block;
 }
 
-.toast {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    color: white;
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    transition: all 0.3s;
-}
-
-.toast-success {
-    background: var(--success);
-}
-
-.toast-danger {
-    background: var(--danger);
-}
-
-.toast-warning {
-    background: var(--warning);
+.days-chip.urgent {
+    color: var(--danger);
 }

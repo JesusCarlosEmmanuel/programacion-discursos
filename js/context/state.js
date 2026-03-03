@@ -9,7 +9,8 @@ const STORAGE_KEYS = {
     SETTINGS: 'speaker_app_settings',
     CONGREGATION: 'speaker_app_congregation',
     DESTINATIONS: 'speaker_app_destinations',
-    ORIGINS: 'speaker_app_origins'
+    ORIGINS: 'speaker_app_origins',
+    EXCEPTIONS: 'speaker_app_exceptions'
 };
 
 const safeParse = (key, fallback = []) => {
@@ -29,6 +30,7 @@ export const State = {
     congregation: safeParse(STORAGE_KEYS.CONGREGATION, {}),
     destinations: safeParse(STORAGE_KEYS.DESTINATIONS),
     origins: safeParse(STORAGE_KEYS.ORIGINS),
+    exceptions: safeParse(STORAGE_KEYS.EXCEPTIONS),
     trash: null, // Temporary storage for undo
 
     saveToStorage(key, data) {
@@ -72,10 +74,42 @@ export const State = {
         this.saveToStorage(STORAGE_KEYS.CONGREGATION, this.congregation);
     },
 
-    // Destination Congregations
-    addDestination(dest) {
-        this.destinations.push(dest);
-        this.saveToStorage(STORAGE_KEYS.DESTINATIONS, this.destinations);
+    // Exceptions Actions
+    addException(exception) {
+        this.exceptions.push(exception);
+        this.saveToStorage(STORAGE_KEYS.EXCEPTIONS, this.exceptions);
+    },
+
+    deleteException(id) {
+        this.exceptions = this.exceptions.filter(e => e.id !== id);
+        this.saveToStorage(STORAGE_KEYS.EXCEPTIONS, this.exceptions);
+    },
+
+    // Destination/Origin Actions
+    saveMaster(type, data) {
+        const key = type === 'destinations' ? STORAGE_KEYS.DESTINATIONS : STORAGE_KEYS.ORIGINS;
+        if (type === 'destinations') {
+            const idx = this.destinations.findIndex(i => i.id === data.id);
+            if (idx !== -1) this.destinations[idx] = data;
+            else this.destinations.push(data);
+            this.saveToStorage(key, this.destinations);
+        } else {
+            const idx = this.origins.findIndex(i => i.id === data.id);
+            if (idx !== -1) this.origins[idx] = data;
+            else this.origins.push(data);
+            this.saveToStorage(key, this.origins);
+        }
+    },
+
+    deleteMaster(type, id) {
+        const key = type === 'destinations' ? STORAGE_KEYS.DESTINATIONS : STORAGE_KEYS.ORIGINS;
+        if (type === 'destinations') {
+            this.destinations = this.destinations.filter(i => i.id !== id);
+            this.saveToStorage(key, this.destinations);
+        } else {
+            this.origins = this.origins.filter(i => i.id !== id);
+            this.saveToStorage(key, this.origins);
+        }
     },
 
     // Bulk Deletion with Undo

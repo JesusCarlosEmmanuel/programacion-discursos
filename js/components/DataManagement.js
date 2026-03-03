@@ -1,4 +1,6 @@
 import { State } from '../context/state.js';
+import { PhoneUtils } from '../utils/phone.js';
+
 
 export const DataManagement = {
     render() {
@@ -53,6 +55,37 @@ export const DataManagement = {
             </section>
 
             <section class="data-section card">
+                <div class="section-header">
+                    <div>
+                        <h3><i data-lucide="calendar-x"></i> Fechas de Excepción</h3>
+                        <p class="section-desc">Asambleas, Memorial u otras fechas sin discurso visitante.</p>
+                    </div>
+                    <button class="btn btn-primary btn-small" id="btn-add-exception">
+                        <i data-lucide="plus"></i> Agregar
+                    </button>
+                </div>
+                <div id="exception-list" style="margin-top:0.75rem; display:flex; flex-direction:column; gap:0.5rem">
+                    <!-- populated by JS -->
+                </div>
+                <div id="exception-form" class="hidden" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--glass-border)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fecha</label>
+                            <input type="date" id="exc-date">
+                        </div>
+                        <div class="form-group" style="flex:2">
+                            <label>Motivo / Título</label>
+                            <input type="text" id="exc-title" placeholder="Ej: Asamblea de Circuito">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:0.5rem">
+                        <button class="btn btn-primary btn-small" id="btn-save-exception"><i data-lucide="check"></i> Guardar</button>
+                        <button class="btn btn-secondary btn-small" id="btn-cancel-exception">Cancelar</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="data-section card">
                 <h3><i data-lucide="scan-line"></i> Escáner Inteligente (OCR/PDF)</h3>
                 <p class="section-desc">Sube un PDF o foto de la programación para extraer datos automáticamente.</p>
                 <div class="file-input-group">
@@ -96,9 +129,16 @@ export const DataManagement = {
                     <button class="btn btn-secondary" id="btn-export-json">
                         <i data-lucide="download"></i> Exportar Todo (JSON)
                     </button>
+                    <div class="import-json-group">
+                        <input type="file" id="import-json-input" accept=".json" hidden>
+                        <button class="btn btn-secondary" id="btn-import-json">
+                            <i data-lucide="upload"></i> Importar Backup (JSON)
+                        </button>
+                    </div>
                     <button class="btn btn-danger" id="btn-clear-all">
                         <i data-lucide="trash-2"></i> BORRAR TODO EL SISTEMA
                     </button>
+
                     <button class="btn btn-secondary" style="background:#475569; color:white" onclick="window.hardReset()">
                         <i data-lucide="refresh-cw"></i> Forzar Limpieza de Cache (Safari/Chrome)
                     </button>
@@ -135,11 +175,12 @@ export const DataManagement = {
                 },
                 scheduler: {
                     name: profForm.querySelector('#cong-sched-name').value,
-                    phone: profForm.querySelector('#cong-sched-phone').value
+                    phone: PhoneUtils.validate(profForm.querySelector('#cong-sched-phone').value)
                 },
                 meetingTime: profForm.querySelector('#cong-time').value
             };
             State.updateCongregation(data);
+
             window.showToast('Perfil actualizado', 'success');
         });
 
@@ -152,13 +193,90 @@ export const DataManagement = {
 
         // Export/Clear
         container.querySelector('#btn-export-json').addEventListener('click', () => this.exportJSON());
+        container.querySelector('#btn-import-json').addEventListener('click', () => container.querySelector('#import-json-input').click());
+        container.querySelector('#import-json-input').addEventListener('change', (e) => this.handleImportJSON(e));
+
         container.querySelector('#btn-clear-all').addEventListener('click', () => {
+
             if (confirm('¿ESTÁS SEGURO? Se borrarán todos los discursantes y programaciones.')) {
                 localStorage.clear();
                 window.location.reload();
             }
         });
 
+        this.initExceptions(container);
+        if (window.lucide) window.lucide.createIcons();
+    },
+
+    initExceptions(container) {
+        const renderExceptions = () => {
+            const list = container.querySelector('#exception-list');
+            const exceptions = State.exceptions || [];
+            if (exceptions.length === 0) {
+                list.innerHTML = `<p style="color:var(--text-dim); font-size:0.85rem">Sin excepciones registradas.</p>`;
+                return;
+            }
+            list.innerHTML = exceptions.map(ex => `
+                <div class="exception-item" style="display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:0.6rem 1rem">
+                    <div>
+                        <strong style="font-size:0.9rem">${ex.title}</strong>
+                        <p style="font-size:0.8rem; color:var(--text-dim)">${ex.date}</p>
+                    </div>
+                    <button class="btn-icon" onclick="DataManagement.deleteException('${ex.id}')" style="color:var(--danger)">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        };
+
+        renderExceptions();
+
+        container.querySelector('#btn-add-exception').addEventListener('click', () => {
+            container.querySelector('#exception-form').classList.remove('hidden');
+            container.querySelector('#btn-add-exception').classList.add('hidden');
+        });
+
+        container.querySelector('#btn-cancel-exception').addEventListener('click', () => {
+            container.querySelector('#exception-form').classList.add('hidden');
+            container.querySelector('#btn-add-exception').classList.remove('hidden');
+        });
+
+        container.querySelector('#btn-save-exception').addEventListener('click', () => {
+            const date = container.querySelector('#exc-date').value;
+            const title = container.querySelector('#exc-title').value.trim();
+            if (!date || !title) { window.showToast('Completa fecha y motivo', 'warning'); return; }
+            State.addException({ id: crypto.randomUUID(), date, title });
+            container.querySelector('#exc-date').value = '';
+            container.querySelector('#exc-title').value = '';
+            container.querySelector('#exception-form').classList.add('hidden');
+            container.querySelector('#btn-add-exception').classList.remove('hidden');
+            renderExceptions();
+            window.showToast('Excepción guardada', 'success');
+        });
+    },
+
+    deleteException(id) {
+        State.deleteException(id);
+        // Re-render the exception list
+        const list = document.querySelector('#exception-list');
+        if (!list) return;
+        const exceptions = State.exceptions || [];
+        if (exceptions.length === 0) {
+            list.innerHTML = `<p style="color:var(--text-dim); font-size:0.85rem">Sin excepciones registradas.</p>`;
+            return;
+        }
+        list.innerHTML = exceptions.map(ex => `
+            <div class="exception-item" style="display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:0.6rem 1rem">
+                <div>
+                    <strong style="font-size:0.9rem">${ex.title}</strong>
+                    <p style="font-size:0.8rem; color:var(--text-dim)">${ex.date}</p>
+                </div>
+                <button class="btn-icon" onclick="DataManagement.deleteException('${ex.id}')" style="color:var(--danger)">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+        `).join('');
         if (window.lucide) window.lucide.createIcons();
     },
 
@@ -272,36 +390,53 @@ export const DataManagement = {
     },
 
     parseEngine2(text) {
-        // Advanced Regex Logic for multidimensional parsing
         const lines = text.split('\n').filter(l => l.trim().length > 5);
         const results = [];
 
-        // Common Patterns
+        // Enhanced Patterns
         const dateRegex = /(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/;
         const timeRegex = /(\d{1,2}):(\d{2})/;
-        const outlineRegex = /#?\s?(\d{1,3})/;
+        const outlineRegex = /(?:#|bosquejo|n[úum]\.?)\s?(\d{1,3})/i;
+        const phoneRegex = /(\d{10,13})/;
 
         lines.forEach(line => {
             const dateMatch = line.match(dateRegex);
             if (dateMatch) {
-                // Potential record found
                 const date = this.formatDate(dateMatch[0]);
                 const timeMatch = line.match(timeRegex);
                 const outlineMatch = line.match(outlineRegex);
+                const phoneMatch = line.match(phoneRegex);
 
-                // Heuristic: Name is usually the first set of words after date or outline
-                // For now, let's keep it simple and let user edit
+                // Try to isolate name and congregation
+                let cleanLine = line.replace(dateMatch[0], '')
+                    .replace(timeMatch ? timeMatch[0] : '', '')
+                    .replace(outlineMatch ? outlineMatch[0] : '', '')
+                    .replace(phoneMatch ? phoneMatch[0] : '', '')
+                    .trim();
+
+                let name = "---", congregation = "---";
+                if (cleanLine.includes(' - ')) {
+                    const parts = cleanLine.split(' - ');
+                    name = parts[0].trim();
+                    congregation = parts[1].trim();
+                } else if (cleanLine.includes('(')) {
+                    const parts = cleanLine.split('(');
+                    name = parts[0].trim();
+                    congregation = parts[1].replace(')', '').trim();
+                }
+
                 results.push({
-                    type: line.toLowerCase().includes('van') || line.toLowerCase().includes('visita') ? 'outgoing' : 'incoming',
+                    type: line.toLowerCase().includes('van') || line.toLowerCase().includes('salida') ? 'outgoing' : 'incoming',
                     date: date,
                     time: timeMatch ? timeMatch[0] : '10:00',
-                    name: '---', // User will edit
-                    congregation: '---',
+                    name: name,
+                    congregation: congregation,
                     outline: outlineMatch ? outlineMatch[1] : '---',
                     title: '---'
                 });
             }
         });
+
 
         // If no dates found, at least provide one empty row for manual entry
         if (results.length === 0) {
@@ -330,7 +465,7 @@ export const DataManagement = {
                 State.addIncomingEvent({
                     id: crypto.randomUUID(),
                     speaker_name: name,
-                    speaker_phone: '',
+                    speaker_phone: PhoneUtils.validate(tr.querySelector('.s-phone')?.value || ''),
                     congregation_origin: cong,
                     outline_number: outline,
                     talk_title: title,
@@ -338,6 +473,7 @@ export const DataManagement = {
                     date,
                     time
                 });
+
             } else {
                 const speaker = State.authorized.find(s => s.name.toLowerCase().includes(name.toLowerCase()));
                 if (speaker) {
@@ -399,9 +535,10 @@ export const DataManagement = {
             // Check if speaker already exists
             let speaker = State.authorized.find(s => s.name === name);
             if (!speaker) {
-                speaker = { id: crypto.randomUUID(), name, phone, talks: [] };
+                speaker = { id: crypto.randomUUID(), name, phone: PhoneUtils.validate(phone), talks: [] };
                 State.authorized.push(speaker);
             }
+
             if (outline && title) {
                 speaker.talks.push({ outline, title, song: song || '' });
             }
@@ -447,7 +584,7 @@ export const DataManagement = {
             State.incoming.push({
                 id: crypto.randomUUID(),
                 speaker_name: name,
-                speaker_phone: phone,
+                speaker_phone: PhoneUtils.validate(phone),
                 congregation_origin: origin,
                 outline_number: outline,
                 talk_title: title,
@@ -455,6 +592,7 @@ export const DataManagement = {
                 date: this.formatDate(date),
                 time
             });
+
         });
         State.saveToStorage('speaker_app_incoming', State.incoming);
         window.showToast('Visitas cargadas', 'success');
@@ -475,7 +613,11 @@ export const DataManagement = {
         const data = {
             authorized: State.authorized,
             outgoing: State.outgoing,
-            incoming: State.incoming
+            incoming: State.incoming,
+            congregation: State.congregation,
+            destinations: State.destinations,
+            origins: State.origins,
+            exceptions: State.exceptions || []
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -484,6 +626,53 @@ export const DataManagement = {
         a.href = url;
         a.download = `backup_discursos_${now}.json`;
         a.click();
+    },
+
+    async handleImportJSON(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+
+            if (confirm('¿Importar datos? Esto sobrescribirá la información actual.')) {
+                if (data.authorized) {
+                    State.authorized = data.authorized;
+                    State.saveToStorage('speaker_app_authorized', State.authorized);
+                }
+                if (data.outgoing) {
+                    State.outgoing = data.outgoing;
+                    State.saveToStorage('speaker_app_outgoing', State.outgoing);
+                }
+                if (data.incoming) {
+                    State.incoming = data.incoming;
+                    State.saveToStorage('speaker_app_incoming', State.incoming);
+                }
+                if (data.congregation) {
+                    State.congregation = data.congregation;
+                    State.saveToStorage('speaker_app_congregation', State.congregation);
+                }
+                if (data.destinations) {
+                    State.destinations = data.destinations;
+                    State.saveToStorage('speaker_app_destinations', State.destinations);
+                }
+                if (data.origins) {
+                    State.origins = data.origins;
+                    State.saveToStorage('speaker_app_origins', State.origins);
+                }
+                if (data.exceptions) {
+                    State.exceptions = data.exceptions;
+                    State.saveToStorage('speaker_app_exceptions', State.exceptions);
+                }
+
+                window.showToast('Datos importados correctamente', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        } catch (err) {
+            console.error(err);
+            window.showToast('Error al importar JSON', 'danger');
+        }
     }
 };
 

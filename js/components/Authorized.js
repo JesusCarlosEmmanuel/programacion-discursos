@@ -1,6 +1,8 @@
 import { State } from '../context/state.js';
+import { PhoneUtils } from '../utils/phone.js';
 
 export const Authorized = {
+
     selectedIds: new Set(),
 
     render() {
@@ -60,28 +62,47 @@ export const Authorized = {
 
     renderSpeakerCard(s) {
         const isSelected = this.selectedIds.has(s.id);
+        const talkCount = s.talks?.length || 0;
         return `
             <div class="card speaker-card ${isSelected ? 'selected' : ''}" data-id="${s.id}">
                 <div class="card-selection">
                     <input type="checkbox" class="bulk-check" data-id="${s.id}" onchange="Authorized.toggleSelection('${s.id}')" ${isSelected ? 'checked' : ''}>
                 </div>
                 <div class="speaker-info" onclick="Authorized.showModal('${s.id}')">
-                    <strong>${s.name}</strong>
-                    <p>${s.phone || 'Sin teléfono'}</p>
-                    <div class="talk-badges">
-                        ${s.talks.map(t => `<span class="badge">#${t.outline}</span>`).join('')}
+                    <div class="speaker-card-main">
+                        <strong>${s.name}</strong>
+                        <p class="phone-link"><i data-lucide="phone"></i> ${s.phone || 'Sin teléfono'}</p>
                     </div>
+                    <div class="talk-badges-container">
+                        ${s.talks.slice(0, 3).map(t => `<span class="badge talk-badge">#${t.outline}</span>`).join('')}
+                        ${talkCount > 3 ? `<span class="badge more-badge">+${talkCount - 3}</span>` : ''}
+                    </div>
+                    <p class="last-ref">Temas: ${s.talks.map(t => t.title).join(', ').substring(0, 50)}${s.talks.length > 0 ? '...' : 'Sin temas'}</p>
                 </div>
                 <div class="speaker-actions">
                     <button class="btn-icon" onclick="Authorized.showModal('${s.id}')">
                         <i data-lucide="edit-3"></i>
                     </button>
-                    <button class="btn-icon error" onclick="Authorized.handleSingleDelete('${s.id}')">
-                        <i data-lucide="trash-2"></i>
+                    <button class="btn-icon share" onclick="Authorized.shareSpeakerInfo('${s.id}')">
+                        <i data-lucide="share-2"></i>
                     </button>
                 </div>
             </div>
         `;
+    },
+
+    shareSpeakerInfo(id) {
+        const speaker = State.authorized.find(s => s.id === id);
+        if (!speaker) return;
+
+        let message = `*Lista de Discursos - ${speaker.name}*\n\n`;
+        speaker.talks.forEach(t => {
+            message += `• *#${t.outline}* - ${t.title} (Cántico: ${t.song || '---'})\n`;
+        });
+        message += `\n_Enviado desde Programación Discursantes_`;
+
+        const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
     },
 
     toggleSelection(id) {
@@ -143,41 +164,47 @@ export const Authorized = {
 
         modal.innerHTML = `
             <div class="modal-content card">
-                <h3>${id ? 'Editar' : 'Nuevo'} Discursante</h3>
+                <div class="modal-header">
+                    <h3>${id ? 'Editar' : 'Nuevo'} Discursante</h3>
+                    ${id ? `<button class="btn btn-secondary btn-small" onclick="Authorized.shareSpeakerInfo('${id}')"><i data-lucide="share-2"></i> Compartir Temas</button>` : ''}
+                </div>
                 <form id="speaker-form">
-                    <div class="form-group">
-                        <label>Nombre Completo</label>
-                        <input type="text" id="speaker-name" value="${speaker.name}" required>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nombre Completo</label>
+                            <input type="text" id="speaker-name" value="${speaker.name}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Teléfono (WhatsApp)</label>
+                            <input type="tel" id="speaker-phone" value="${speaker.phone}" required placeholder="521...">
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label>Teléfono (WhatsApp)</label>
-                        <input type="tel" id="speaker-phone" value="${speaker.phone}" required placeholder="Ej: 521234567890">
-                    </div>
-                    <div class="form-group">
-                        <label>Contacto Secundario (Email/Red Social)</label>
+                        <label>Contacto Secundario (Email/Referencia)</label>
                         <input type="text" id="speaker-secondary" value="${speaker.contact_secondary || ''}" placeholder="Opcional">
                     </div>
-                    <div class="form-group">
-                        <label>Comentarios / Notas</label>
-                        <textarea id="speaker-comments" placeholder="Notas adicionales">${speaker.comments || ''}</textarea>
-                    </div>
                     
-                    <div class="talks-section">
-                        <label>Discursos Registrados</label>
-                        <div id="talks-list">
-                            ${speaker.talks.map((t, i) => this.renderTalkField(t, i)).join('')}
-                        </div>
-                        <button type="button" class="btn btn-secondary btn-small" id="btn-add-talk" style="width:100%; margin-top:0.5rem">
-                            <i data-lucide="plus"></i> Añadir Discurso
-                        </button>
+                    <div class="talks-section-header">
+                        <label><i data-lucide="book-open"></i> Discursos Disponibles</label>
+                    </div>
+                    <div id="talks-list" class="talks-scroll-area">
+                        ${speaker.talks.map((t, i) => this.renderTalkField(t, i)).join('')}
+                    </div>
+                    <button type="button" class="btn btn-outline btn-small" id="btn-add-talk" style="width:100%; margin-top:0.5rem">
+                        <i data-lucide="plus"></i> Añadir Discurso
+                    </button>
+
+                    <div class="form-group" style="margin-top:1rem">
+                        <label>Notas Privadas</label>
+                        <textarea id="speaker-comments" placeholder="Preferencias, fechas bloqueadas, etc.">${speaker.comments || ''}</textarea>
                     </div>
 
-                    <div class="modal-actions" style="margin-top:1.5rem">
+                    <div class="modal-actions">
                         <div style="display:flex; gap:10px">
                             <button type="button" class="btn btn-secondary" id="btn-close-modal">Cancelar</button>
-                            ${id ? `<button type="button" class="btn btn-danger" onclick="Authorized.handleSingleDelete('${id}'); document.getElementById('modal-container').classList.add('hidden')"><i data-lucide="trash-2"></i></button>` : ''}
+                            ${id ? `<button type="button" class="btn btn-icon error" onclick="Authorized.handleSingleDelete('${id}'); document.getElementById('modal-container').classList.add('hidden')"><i data-lucide="trash-2"></i></button>` : ''}
                         </div>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Discursante</button>
                     </div>
                 </form>
             </div>
@@ -220,8 +247,9 @@ export const Authorized = {
 
     handleSave(id) {
         const name = document.getElementById('speaker-name').value;
-        const phone = document.getElementById('speaker-phone').value;
+        const phone = PhoneUtils.validate(document.getElementById('speaker-phone').value);
         const secondary = document.getElementById('speaker-secondary').value;
+
         const comments = document.getElementById('speaker-comments').value;
         const talkEntries = document.querySelectorAll('.talk-entry');
 

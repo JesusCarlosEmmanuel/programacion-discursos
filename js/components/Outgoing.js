@@ -1,4 +1,5 @@
 import { State } from '../context/state.js';
+import { EventService } from '../services/EventService.js';
 
 export const Outgoing = {
     selectedIds: new Set(),
@@ -51,7 +52,8 @@ export const Outgoing = {
         const speaker = State.authorized.find(s => s.id === e.speaker_id);
         const isSelected = this.selectedIds.has(e.id);
         const dayNames = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
-        const dayName = dayNames[new Date(e.date).getDay()];
+        const dateObj = new Date(e.date + 'T12:00:00'); // Prevent shifting
+        const dayName = dayNames[dateObj.getDay()];
 
         return `
             <div class="card event-card ${isSelected ? 'selected' : ''}" data-id="${e.id}">
@@ -118,35 +120,35 @@ export const Outgoing = {
     },
 
     executeDelete(ids) {
-        const backup = State.outgoing.filter(e => ids.includes(e.id));
-        State.outgoing = State.outgoing.filter(e => !ids.includes(e.id));
-        State.saveToStorage('speaker_app_outgoing', State.outgoing);
-
-        this.renderList(document.querySelector('.event-list'), State.outgoing);
-
-        window.showUndo('Eliminado', () => {
-            State.outgoing.push(...backup);
-            State.saveToStorage('speaker_app_outgoing', State.outgoing);
-            this.renderList(document.querySelector('.event-list'), State.outgoing);
+        EventService.deleteEvents('outgoing', ids, () => {
+            if (document.querySelector('.event-list')) {
+                this.renderList(document.querySelector('.event-list'), State.outgoing);
+            }
         });
+        this.renderList(document.querySelector('.event-list'), State.outgoing);
     },
 
     showModal(id = null) {
         const event = id ? State.outgoing.find(e => e.id === id) : {
-            speaker_id: '', outline_number: '', talk_title: '', destination_congregation: '', date: '', time: '10:00', contact_secondary: '', comments: ''
+            speaker_id: '', outline_number: '', talk_title: '', song_number: '', destination_congregation: '', date: '', time: '10:00', comments: ''
         };
 
         const modal = document.getElementById('modal-container');
         modal.classList.remove('hidden');
 
         const destinations = State.destinations;
+        const destCong = State.destinations.find(d => d.name === event.destination_congregation);
 
         modal.innerHTML = `
             <div class="modal-content card">
-                <h3>${id ? 'Editar' : 'Programar'} Salida</h3>
+                <div class="modal-header">
+                    <h3>${id ? 'Editar' : 'Programar'} Salida</h3>
+                    ${id ? `<button class="btn btn-secondary btn-small" onclick="Outgoing.sharePreview('${id}')"><i data-lucide="image"></i> Generar Confirmación</button>` : ''}
+                </div>
                 <form id="event-form">
+                    <div class="form-section-title">Discursante de Mi Congregación</div>
                     <div class="form-group">
-                        <label>Discursante (Local)</label>
+                        <label>Seleccionar Hermano</label>
                         <select id="e-speaker" required>
                             <option value="">Seleccionar...</option>
                             ${State.authorized.map(s => `<option value="${s.id}" ${s.id === event.speaker_id ? 'selected' : ''}>${s.name}</option>`).join('')}
@@ -159,36 +161,44 @@ export const Outgoing = {
                         <datalist id="dest-list">
                             ${destinations.map(d => `<option value="${d.name}">`).join('')}
                         </datalist>
+                        ${destCong ? `<p class="hint-text">Contacto: ${destCong.contact_name} (${destCong.contact_phone})</p>` : ''}
                     </div>
 
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-                        <div class="form-group">
-                            <label>Núm. Bosquejo</label>
+                    <div class="form-section-title">Detalles de la Asignación</div>
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 0 0 30%">
+                            <label>Bosquejo #</label>
                             <input type="text" id="e-outline" value="${event.outline_number}" required>
                         </div>
+                        <div class="form-group" style="flex: 1">
+                            <label>Título</label>
+                            <input type="text" id="e-title" value="${event.talk_title}" required>
+                        </div>
+                        <div class="form-group" style="flex: 0 0 20%">
+                            <label>Cántico</label>
+                            <input type="text" id="e-song" value="${event.song_number || ''}">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
                         <div class="form-group">
                             <label>Fecha</label>
                             <input type="date" id="e-date" value="${event.date}" required>
                         </div>
+                        <div class="form-group">
+                            <label>Hora</label>
+                            <input type="time" id="e-time" value="${event.time}">
+                        </div>
                     </div>
 
                     <div class="form-group">
-                        <label>Título del Discurso</label>
-                        <input type="text" id="e-title" value="${event.talk_title}" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Contacto Secundario (Destino)</label>
-                        <input type="text" id="e-secondary" value="${event.contact_secondary || ''}" placeholder="Opcional">
-                    </div>
-                    <div class="form-group">
-                        <label>Comentarios / Notas</label>
+                        <label>Notas / Comentarios</label>
                         <textarea id="e-comments" placeholder="Notas adicionales">${event.comments || ''}</textarea>
                     </div>
 
-                    <div class="modal-actions" style="margin-top:1.5rem">
+                    <div class="modal-actions">
                         <button type="button" class="btn btn-secondary" id="btn-close-modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Agendar</button>
+                        <button type="submit" class="btn btn-primary">${id ? 'Actualizar' : 'Agendar Salida'}</button>
                     </div>
                 </form>
             </div>
@@ -197,7 +207,7 @@ export const Outgoing = {
         if (window.lucide) window.lucide.createIcons();
         modal.querySelector('#btn-close-modal').addEventListener('click', () => modal.classList.add('hidden'));
 
-        // Auto-fill title from speaker if outline matches
+        // Auto-fill title and song from speaker if outline matches
         modal.querySelector('#e-speaker').addEventListener('change', (e) => this.autoFill(e.target.value));
         modal.querySelector('#e-outline').addEventListener('input', (e) => this.autoFill(modal.querySelector('#e-speaker').value, e.target.value));
 
@@ -207,6 +217,20 @@ export const Outgoing = {
         });
     },
 
+    sharePreview(id) {
+        const event = State.outgoing.find(e => e.id === id);
+        if (event) {
+            window.router.navigate('reports');
+            setTimeout(() => {
+                document.getElementById('filter-start').value = event.date;
+                document.getElementById('filter-end').value = event.date;
+                document.getElementById('filter-type').value = 'Van';
+                document.getElementById('btn-filter').click();
+                window.showToast('Previsualización de salida lista', 'info');
+            }, 500);
+        }
+    },
+
     autoFill(speakerId, outline = null) {
         if (!speakerId) return;
         const speaker = State.authorized.find(s => s.id === speakerId);
@@ -214,12 +238,16 @@ export const Outgoing = {
 
         if (outline) {
             const talk = speaker.talks.find(t => t.outline === outline);
-            if (talk) document.getElementById('e-title').value = talk.title;
+            if (talk) {
+                document.getElementById('e-title').value = talk.title;
+                document.getElementById('e-song').value = talk.song || '';
+            }
         } else {
             // If only speaker changed, find the first talk
             if (speaker.talks.length === 1) {
                 document.getElementById('e-outline').value = speaker.talks[0].outline;
                 document.getElementById('e-title').value = speaker.talks[0].title;
+                document.getElementById('e-song').value = speaker.talks[0].song || '';
             }
         }
     },
@@ -231,35 +259,21 @@ export const Outgoing = {
             destination_congregation: document.getElementById('e-destination').value,
             outline_number: document.getElementById('e-outline').value,
             talk_title: document.getElementById('e-title').value,
+            song_number: document.getElementById('e-song').value,
             date: document.getElementById('e-date').value,
-            time: '12:00', // Default
-            contact_secondary: document.getElementById('e-secondary').value,
+            time: document.getElementById('e-time').value,
             comments: document.getElementById('e-comments').value
         };
 
-        // Monthly limit check
-        const dateObj = new Date(data.date);
-        const month = dateObj.getMonth();
-        const year = dateObj.getFullYear();
-        const count = State.outgoing.filter(e => {
-            const d = new Date(e.date);
-            return e.speaker_id === data.speaker_id && d.getMonth() === month && d.getFullYear() === year && e.id !== data.id;
-        }).length;
+        const result = EventService.saveOutgoing(data);
 
-        if (count >= 1) {
-            if (!confirm('Este discursante ya tiene una salida este mes. ¿Continuar?')) return;
+        if (result.success) {
+            document.getElementById('modal-container').classList.add('hidden');
+            this.renderList(document.querySelector('.event-list'), State.outgoing);
+            window.showToast('Salida guardada', 'success');
+        } else if (result.message) {
+            window.showToast(result.message, 'warning');
         }
-
-        if (id) {
-            State.outgoing = State.outgoing.map(e => e.id === id ? data : e);
-        } else {
-            State.outgoing.push(data);
-        }
-
-        State.saveToStorage('speaker_app_outgoing', State.outgoing);
-        document.getElementById('modal-container').classList.add('hidden');
-        this.renderList(document.querySelector('.event-list'), State.outgoing);
-        window.showToast('Actualizado', 'success');
     }
 };
 

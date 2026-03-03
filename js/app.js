@@ -34,19 +34,34 @@ class Router {
             masters: Masters
         };
         window.router = this;
+
+        window.addEventListener('popstate', (e) => {
+            if (e.state && e.state.page) {
+                this.navigate(e.state.page, false);
+            } else {
+                this.navigate('dashboard', false);
+            }
+        });
+
         this.init();
     }
 
     init() {
         try {
-            this.navigate('dashboard');
+            const hash = window.location.hash.replace('#', '');
+            const initialPage = this.routes[hash] ? hash : 'dashboard';
+            this.navigate(initialPage, true);
         } catch (e) {
             console.error("Router init failed:", e);
         }
     }
 
-    navigate(page) {
+    navigate(page, addToHistory = true) {
         try {
+            if (addToHistory) {
+                history.pushState({ page }, '', `#${page}`);
+            }
+
             // Update Nav UI
             this.navItems.forEach(item => {
                 if (item.getAttribute('data-page') === page) {

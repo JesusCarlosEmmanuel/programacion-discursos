@@ -1,6 +1,8 @@
 import { State } from '../context/state.js';
+import { PhoneUtils } from '../utils/phone.js';
 
 export const Masters = {
+
     render() {
         const container = document.createElement('div');
         container.className = 'masters-view';
@@ -67,12 +69,27 @@ export const Masters = {
             content.innerHTML = list.map(item => `
                 <div class="card master-card" data-id="${item.id}">
                     <div class="master-info" onclick="Masters.showMasterModal('${item.id}')">
-                        <strong>${item.name}</strong>
-                        <p>${item.address || 'Sin dirección'}</p>
-                        <p class="contact-line">
-                            <i data-lucide="user"></i> ${item.contact_name || 'Sin contacto'} 
-                            (${item.contact_phone || '---'})
-                        </p>
+                        <div class="master-card-header">
+                            <strong>${item.name}</strong>
+                        </div>
+                        <p class="address-line"><i data-lucide="map-pin"></i> ${item.address || 'Sin dirección'}</p>
+                        
+                        <div class="contacts-grid">
+                            <div class="contact-item">
+                                <span class="contact-label">Contacto 1:</span>
+                                <strong>${item.contact_name || 'Sin nombre'}</strong>
+                                <p><i data-lucide="phone"></i> ${item.contact_phone || '---'}</p>
+                                ${item.contact_email ? `<p><i data-lucide="mail"></i> ${item.contact_email}</p>` : ''}
+                            </div>
+                            ${item.contact2_name ? `
+                            <div class="contact-item">
+                                <span class="contact-label">Contacto 2:</span>
+                                <strong>${item.contact2_name}</strong>
+                                <p><i data-lucide="phone"></i> ${item.contact2_phone || '---'}</p>
+                                ${item.contact2_email ? `<p><i data-lucide="mail"></i> ${item.contact2_email}</p>` : ''}
+                            </div>
+                            ` : ''}
+                        </div>
                     </div>
                     <div class="master-actions">
                         <button class="btn-icon" onclick="Masters.showMasterModal('${item.id}')">
@@ -91,7 +108,11 @@ export const Masters = {
 
     showMasterModal(id = null) {
         const list = this.currentTab === 'destinations' ? State.destinations : State.origins;
-        const item = id ? list.find(i => i.id === id) : { name: '', address: '', contact_name: '', contact_phone: '' };
+        const item = id ? list.find(i => i.id === id) : {
+            name: '', address: '',
+            contact_name: '', contact_phone: '', contact_email: '',
+            contact2_name: '', contact2_phone: '', contact2_email: ''
+        };
 
         const modal = document.getElementById('modal-container');
         modal.classList.remove('hidden');
@@ -108,14 +129,39 @@ export const Masters = {
                         <label>Dirección / Ubicación</label>
                         <input type="text" id="m-address" value="${item.address || ''}" placeholder="Calle, número, ciudad">
                     </div>
+                    
+                    <div class="form-section-title">Contacto Principal</div>
                     <div class="form-group">
-                        <label>Encargado de Discursos (Nombre)</label>
+                        <label>Nombre</label>
                         <input type="text" id="m-contact-name" value="${item.contact_name || ''}" placeholder="Nombre completo">
                     </div>
-                    <div class="form-group">
-                        <label>Teléfono del Encargado</label>
-                        <input type="tel" id="m-contact-phone" value="${item.contact_phone || ''}" placeholder="Número de WhatsApp">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Teléfono</label>
+                            <input type="tel" id="m-contact-phone" value="${item.contact_phone || ''}" placeholder="WhatsApp">
+                        </div>
+                        <div class="form-group">
+                            <label>Correo</label>
+                            <input type="email" id="m-contact-email" value="${item.contact_email || ''}" placeholder="email@ejemplo.com">
+                        </div>
                     </div>
+
+                    <div class="form-section-title">2° Contacto (Opcional)</div>
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <input type="text" id="m-contact2-name" value="${item.contact2_name || ''}" placeholder="Nombre completo">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Teléfono</label>
+                            <input type="tel" id="m-contact2-phone" value="${item.contact2_phone || ''}" placeholder="WhatsApp">
+                        </div>
+                        <div class="form-group">
+                            <label>Correo</label>
+                            <input type="email" id="m-contact2-email" value="${item.contact2_email || ''}" placeholder="email@ejemplo.com">
+                        </div>
+                    </div>
+
                     <div class="modal-actions">
                         <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-container').classList.add('hidden')">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Guardar</button>
@@ -138,24 +184,14 @@ export const Masters = {
             name: document.getElementById('m-name').value,
             address: document.getElementById('m-address').value,
             contact_name: document.getElementById('m-contact-name').value,
-            contact_phone: document.getElementById('m-contact-phone').value,
+            contact_phone: PhoneUtils.validate(document.getElementById('m-contact-phone').value),
+            contact_email: document.getElementById('m-contact-email').value,
+            contact2_name: document.getElementById('m-contact2-name').value,
+            contact2_phone: PhoneUtils.validate(document.getElementById('m-contact2-phone').value),
+            contact2_email: document.getElementById('m-contact2-email').value,
         };
 
-        if (this.currentTab === 'destinations') {
-            if (id) {
-                State.destinations = State.destinations.map(i => i.id === id ? data : i);
-            } else {
-                State.destinations.push(data);
-            }
-            State.saveToStorage('speaker_app_destinations', State.destinations);
-        } else {
-            if (id) {
-                State.origins = State.origins.map(i => i.id === id ? data : i);
-            } else {
-                State.origins.push(data);
-            }
-            State.saveToStorage('speaker_app_origins', State.origins);
-        }
+        State.saveMaster(this.currentTab, data);
 
         document.getElementById('modal-container').classList.add('hidden');
         window.showToast('Actualizado correctamente', 'success');
@@ -168,24 +204,12 @@ export const Masters = {
         const list = this.currentTab === 'destinations' ? State.destinations : State.origins;
         const backup = list.find(i => i.id === id);
 
-        if (this.currentTab === 'destinations') {
-            State.destinations = State.destinations.filter(i => i.id !== id);
-            State.saveToStorage('speaker_app_destinations', State.destinations);
-        } else {
-            State.origins = State.origins.filter(i => i.id !== id);
-            State.saveToStorage('speaker_app_origins', State.origins);
-        }
+        State.deleteMaster(this.currentTab, id);
 
         this.renderList(document.querySelector('.masters-view'));
 
         window.showUndo('Eliminado', () => {
-            if (this.currentTab === 'destinations') {
-                State.destinations.push(backup);
-                State.saveToStorage('speaker_app_destinations', State.destinations);
-            } else {
-                State.origins.push(backup);
-                State.saveToStorage('speaker_app_origins', State.origins);
-            }
+            State.saveMaster(this.currentTab, backup);
             this.renderList(document.querySelector('.masters-view'));
         });
     }
