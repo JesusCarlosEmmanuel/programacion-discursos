@@ -28,6 +28,12 @@ export const Authorized = {
                         <i data-lucide="upload"></i> Importar CSV
                         <input type="file" id="authorized-import-csv" accept=".csv, .txt" class="hidden">
                     </label>
+                    <button class="btn btn-secondary btn-small" id="btn-share-catalog" title="Compartir Lista de Temas">
+                        <i data-lucide="share-2"></i> Temas
+                    </button>
+                    <button class="btn btn-secondary btn-small" id="btn-share-availability" title="Compartir Disponibilidad">
+                        <i data-lucide="calendar"></i> Disponibilidad
+                    </button>
                     <button class="btn btn-primary btn-small" id="btn-add-speaker" style="margin: 0">
                         <i data-lucide="plus"></i> Nuevo
                     </button>
@@ -57,6 +63,23 @@ export const Authorized = {
         if (importInput) {
             importInput.addEventListener('change', (e) => this.handleImportCSV(e));
         }
+
+        container.querySelector('#btn-share-catalog').addEventListener('click', () => {
+            import('../services/NotificationService.js').then(({ NotificationService }) => {
+                NotificationService.shareSpeakerCatalog(State.authorized);
+            });
+        });
+
+        container.querySelector('#btn-share-availability').addEventListener('click', () => {
+            const today = new Date();
+            const currentMonth = today.toISOString().substring(0, 7);
+            const month = prompt('Ingrese el mes a consultar (YYYY-MM):', currentMonth);
+            if (!month) return;
+
+            import('../services/NotificationService.js').then(({ NotificationService }) => {
+                NotificationService.shareSpeakerAvailability(month);
+            });
+        });
 
         if (window.lucide) window.lucide.createIcons();
     },

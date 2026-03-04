@@ -366,6 +366,23 @@ export const Outgoing = {
             comments: document.getElementById('e-comments').value
         };
 
+        // Frequency Validation: One outing per month
+        if (data.speaker_id && data.date) {
+            const monthStr = data.date.substring(0, 7);
+            const duplicate = State.outgoing.find(e =>
+                e.speaker_id === data.speaker_id &&
+                e.date.startsWith(monthStr) &&
+                e.id !== id
+            );
+
+            if (duplicate) {
+                const speaker = State.authorized.find(s => s.id === data.speaker_id);
+                if (!confirm(`⚠️ Aviso: ${speaker?.name || 'El hermano'} ya tiene una salida programada en este mes (${duplicate.date}).\n\n¿Deseas programarlo de nuevo de todos modos?`)) {
+                    return;
+                }
+            }
+        }
+
         const result = EventService.saveOutgoing(data);
 
         if (result.success) {

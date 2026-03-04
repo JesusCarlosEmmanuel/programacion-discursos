@@ -11,8 +11,9 @@ Combina un diseño moderno con *Glassmorphism*, modo oscuro inmersivo y una arqu
 - **Autocompletado Inteligente:** Búsqueda en tiempo real mediante *Datalist* y autocompletado de domicilios, horarios y días.
 - **Borradores Automáticos:** Los formularios guardan temporalmente tu progreso si haces clic fuera de la ventana por accidente.
 - **Notificaciones WhatsApp Multi-Objetivo:** Envío de notificaciones y recordatorios a 10 días, pre-formateadas directamente a WhatsApp para Discursantes, Coordinadores Locales y Coordinadores Anfitriones/Origen.
-- **Informes Dinámicos:** Genera reportes tabulares en imagen y texto plano para enviar el cronograma mensual a supervisores por WhatsApp.
-- **Prevención de Errores Avanzada:** El sistema alerta proactivamente si se asigna un bosquejo que ya fue impartido en los últimos 3 meses, o si se detecta un fin de semana libre en los próximos 30 días sin discursante asignado.
+- **Informes Dinámicos:** Genera reportes tabulares en imagen, texto plano y **PDF (Landscape)** para enviar el cronograma mensual a supervisores por WhatsApp.
+- **Prevención de Errores Avanzada:** El sistema alerta proactivamente si se asigna un bosquejo duplicado (3 meses), si el orador ya tiene otra salida en el mismo mes, o si hay fines de semana sin cubrir.
+- **Compartición de Catálogo:** Exporta rápidamente tu lista de oradores y temas disponibles directamente a WhatsApp para coordinar con otras congregaciones.
 - **Calendario Visual Mensual:** Vista rápida en bloques mensuales (verde = asignado, rojo = vacío). 
 
 ## 📲 Walkthrough y Uso
