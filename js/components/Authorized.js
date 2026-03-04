@@ -1,5 +1,7 @@
 import { State } from '../context/state.js';
 import { PhoneUtils } from '../utils/phone.js';
+import { CSVUtils } from '../utils/csv.js';
+import { PhoneUtils } from '../utils/phone.js';
 
 export const Authorized = {
 
@@ -16,15 +18,21 @@ export const Authorized = {
                     <i data-lucide="trash-2"></i> Borrar
                 </button>
             </div>
-            <div class="view-header">
+            <div class="view-header" style="flex-wrap: wrap; gap: 0.5rem">
                 <h2>Discursantes Autorizados</h2>
-                <div class="search-box">
-                    <i data-lucide="search"></i>
-                    <input type="text" id="speaker-search" placeholder="Buscar hermano...">
+                <div style="display: flex; gap: 0.5rem; flex: 1; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <div class="search-box">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="speaker-search" placeholder="Buscar hermano...">
+                    </div>
+                    <label class="btn btn-secondary btn-small" style="cursor: pointer; margin: 0">
+                        <i data-lucide="upload"></i> Importar CSV
+                        <input type="file" id="authorized-import-csv" accept=".csv, .txt" class="hidden">
+                    </label>
+                    <button class="btn btn-primary btn-small" id="btn-add-speaker" style="margin: 0">
+                        <i data-lucide="plus"></i> Nuevo
+                    </button>
                 </div>
-                <button class="btn btn-primary" id="btn-add-speaker">
-                    <i data-lucide="plus"></i> Nuevo
-                </button>
             </div>
 
             <div class="speaker-list">
@@ -45,6 +53,11 @@ export const Authorized = {
             const filtered = State.authorized.filter(s => s.name.toLowerCase().includes(query));
             this.renderList(container.querySelector('.speaker-list'), filtered);
         });
+
+        const importInput = container.querySelector('#authorized-import-csv');
+        if (importInput) {
+            importInput.addEventListener('change', (e) => this.handleImportCSV(e));
+        }
 
         if (window.lucide) window.lucide.createIcons();
     },
@@ -277,6 +290,86 @@ export const Authorized = {
         document.getElementById('modal-container').classList.add('hidden');
         this.renderList(document.querySelector('.speaker-list'), State.authorized);
         window.showToast('Guardado correctamente', 'success');
+    },
+
+    handleImportCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target.result;
+                const rows = CSVUtils.parseAuto(text);
+                if (rows.length < 2) throw new Error("Archivo vacío o formato inválido");
+
+                // Check headers
+                // Based on image: Nombre discursante | No. Teléfono | No. Discurso | Título | Canción
+                // It might not be exact, so we'll just check if there are roughly enough columns.
+                // Assuming Name, Phone, Outline, Title, (optional Song)
+
+                let speakersMap = {}; // Key: name.toLowerCase()
+
+                // Load existing to map
+                State.authorized.forEach(s => {
+                    speakersMap[s.name.trim().toLowerCase()] = { ...s };
+                });
+
+                let parsedCount = 0;
+                let isFirstRow = true;
+
+                for (const row of rows) {
+                    // Skip header row roughly by checking if first col looks like a header
+                    if (isFirstRow && row[0].toLowerCase().includes('nombre') && row[1].toLowerCase().includes('tel')) {
+                        isFirstRow = false;
+                        continue;
+                    }
+                    if (row.length < 4) continue; // Need at least Name, Phone, Outline, Title
+
+                    const name = row[0].trim();
+                    const phone = PhoneUtils.validate(row[1].trim() || '');
+                    const outline = row[2].trim();
+                    const title = row[3].trim();
+                    const song = row[4] ? row[4].trim() : '';
+
+                    if (!name) continue;
+
+                    const key = name.toLowerCase();
+
+                    if (!speakersMap[key]) {
+                        speakersMap[key] = {
+                            id: crypto.randomUUID(),
+                            name: name,
+                            phone: phone,
+                            contact_secondary: '',
+                            comments: '',
+                            talks: []
+                        };
+                    }
+
+                    // Check if talk already exists
+                    const existingTalk = speakersMap[key].talks.find(t => t.outline == outline);
+                    if (!existingTalk && outline) {
+                        speakersMap[key].talks.push({ outline, title, song });
+                    }
+
+                    parsedCount++;
+                }
+
+                State.authorized = Object.values(speakersMap);
+                State.saveToStorage('speaker_app_authorized', State.authorized);
+
+                this.renderList(document.querySelector('.speaker-list'), State.authorized);
+                window.showToast(`Se importaron ${parsedCount} discursos exitosamente`, 'success');
+
+            } catch (error) {
+                console.error("Error importing CSV:", error);
+                window.showToast('Error al importar el archivo CSV', 'danger');
+            }
+            // reset file input
+            event.target.value = '';
+        };
+        reader.readAsText(file);
     }
 };
 

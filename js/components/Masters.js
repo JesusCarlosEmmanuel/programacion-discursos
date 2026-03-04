@@ -1,5 +1,6 @@
 import { State } from '../context/state.js';
 import { PhoneUtils } from '../utils/phone.js';
+import { CSVUtils } from '../utils/csv.js';
 
 export const Masters = {
 
@@ -8,11 +9,17 @@ export const Masters = {
         container.className = 'masters-view';
 
         container.innerHTML = `
-            <div class="view-header">
+            <div class="view-header" style="flex-wrap: wrap; gap: 0.5rem">
                 <h2>Directorio de Congregaciones</h2>
-                <div class="tabs">
-                    <button class="tab-btn active" id="tab-destinations">Destinos (Visitamos)</button>
-                    <button class="tab-btn" id="tab-origins">Orígenes (Nos visitan)</button>
+                <div style="display: flex; gap: 0.5rem; flex: 1; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <div class="tabs" style="margin: 0">
+                        <button class="tab-btn active" id="tab-destinations">Destinos (Visitamos)</button>
+                        <button class="tab-btn" id="tab-origins">Orígenes (Nos visitan)</button>
+                    </div>
+                    <label class="btn btn-secondary btn-small" style="cursor: pointer; margin: 0">
+                        <i data-lucide="upload"></i> Importar CSV
+                        <input type="file" id="masters-import-csv" accept=".csv, .txt" class="hidden">
+                    </label>
                 </div>
             </div>
 
@@ -43,6 +50,9 @@ export const Masters = {
         container.querySelector('#btn-add-master').addEventListener('click', () => {
             this.showMasterModal();
         });
+
+        const importInput = container.querySelector('#masters-import-csv');
+        if (importInput) importInput.addEventListener('change', (e) => this.handleImportCSV(e));
 
         if (window.lucide) window.lucide.createIcons();
     },
@@ -212,6 +222,81 @@ export const Masters = {
             State.saveMaster(this.currentTab, backup);
             this.renderList(document.querySelector('.masters-view'));
         });
+    },
+
+    handleImportCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target.result;
+                const rows = CSVUtils.parseAuto(text);
+                if (rows.length < 2) throw new Error("Archivo vacío");
+
+                let parsedCount = 0;
+                let isFirstRow = true;
+
+                for (const row of rows) {
+                    if (isFirstRow && row[0].toLowerCase().includes('congregaci')) { isFirstRow = false; continue; }
+                    if (row.length < 2) continue;
+
+                    const name = row[0].trim();
+                    if (!name) continue;
+
+                    const list = this.currentTab === 'destinations' ? State.destinations : State.origins;
+                    // Check if already exists
+                    if (list.find(i => i.name.toLowerCase() === name.toLowerCase())) continue;
+
+                    let contact_name = '';
+                    let contact_phone = '';
+                    let address = '';
+
+                    if (this.currentTab === 'destinations' && row.length >= 3) {
+                        // Expected: Congregación | Contacto Congregación | Domicilio ...
+                        const rawContact = row[1];
+                        address = row[2];
+
+                        // Split contact "Nombre \n Telefono"
+                        const match = rawContact.match(/([a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+)[\\n\\r]*(.*)/);
+                        if (match) {
+                            contact_name = match[1].trim();
+                            contact_phone = PhoneUtils.validate(match[2].trim());
+                        } else {
+                            contact_name = rawContact;
+                        }
+                    } else {
+                        // Expected: Congregación | No. Telefónico
+                        contact_phone = PhoneUtils.validate(row[1].trim());
+                    }
+
+                    const data = {
+                        id: crypto.randomUUID(),
+                        name,
+                        address,
+                        contact_name,
+                        contact_phone,
+                        contact_email: '',
+                        contact2_name: '',
+                        contact2_phone: '',
+                        contact2_email: ''
+                    };
+
+                    State.saveMaster(this.currentTab, data, false); // Disable trigger if bulk, but safe to use
+                    parsedCount++;
+                }
+
+                this.renderList(document.querySelector('.masters-view'));
+                window.showToast(`Se importaron ${parsedCount} congregaciones exitosamente`, 'success');
+
+            } catch (error) {
+                console.error("Error importing CSV:", error);
+                window.showToast('Error al importar el archivo CSV', 'danger');
+            }
+            event.target.value = '';
+        };
+        reader.readAsText(file);
     }
 };
 

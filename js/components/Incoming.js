@@ -1,6 +1,7 @@
 import { State } from '../context/state.js';
 import { PhoneUtils } from '../utils/phone.js';
 import { EventService } from '../services/EventService.js';
+import { CSVUtils } from '../utils/csv.js';
 
 export const Incoming = {
 
@@ -17,11 +18,17 @@ export const Incoming = {
                     <i data-lucide="trash-2"></i> Borrar
                 </button>
             </div>
-            <div class="view-header">
+            <div class="view-header" style="flex-wrap: wrap; gap: 0.5rem">
                 <h2>Discursantes que Vienen</h2>
-                <button class="btn btn-primary" id="btn-add-event">
-                    <i data-lucide="plus"></i> Agendar Visita
-                </button>
+                <div style="display: flex; gap: 0.5rem; flex: 1; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <label class="btn btn-secondary btn-small" style="cursor: pointer; margin: 0">
+                        <i data-lucide="upload"></i> Importar CSV
+                        <input type="file" id="incoming-import-csv" accept=".csv, .txt" class="hidden">
+                    </label>
+                    <button class="btn btn-primary btn-small" id="btn-add-event" style="margin: 0">
+                        <i data-lucide="plus"></i> Agendar Visita
+                    </button>
+                </div>
             </div>
 
             <div class="event-list">
@@ -36,6 +43,8 @@ export const Incoming = {
 
     initEvents(container) {
         container.querySelector('#btn-add-event').addEventListener('click', () => this.showModal());
+        const importInput = container.querySelector('#incoming-import-csv');
+        if (importInput) importInput.addEventListener('change', (e) => this.handleImportCSV(e));
         if (window.lucide) window.lucide.createIcons();
     },
 
@@ -255,6 +264,114 @@ export const Incoming = {
         } else if (result.message) {
             window.showToast(result.message, 'warning');
         }
+    },
+
+    parseSpanishDate(dateStr) {
+        if (!dateStr) return '';
+        // "domingo, 12 de julio de 2026" or "12/07/2026"
+        const months = { 'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04', 'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08', 'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12' };
+        const str = dateStr.toLowerCase();
+        for (const [monthName, monthNum] of Object.entries(months)) {
+            if (str.includes(monthName)) {
+                const match = str.match(/(\d{1,2})\s+de\s+[a-z]+\s+de\s+(\d{4})/);
+                if (match) {
+                    const d = match[1].padStart(2, '0');
+                    return `${match[2]}-${monthNum}-${d}`;
+                }
+            }
+        }
+        // Try parsing normal date if not spanish format
+        const d = new Date(dateStr);
+        if (!isNaN(d)) return d.toISOString().split('T')[0];
+        return '';
+    },
+
+    parseTime(timeStr) {
+        if (!timeStr) return '12:00';
+        let match = timeStr.match(/(\d{1,2}):(\d{2})([^a-z]*)([ap]\.?\s?m\.?)/i);
+        if (match) {
+            let h = parseInt(match[1]);
+            const m = match[2];
+            const ampm = match[4].toLowerCase().replace(/\./g, '').trim();
+            if (ampm === 'pm' && h < 12) h += 12;
+            if (ampm === 'am' && h === 12) h = 0;
+            return `${h.toString().padStart(2, '0')}:${m}`;
+        }
+        return '12:00';
+    },
+
+    handleImportCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target.result;
+                const rows = CSVUtils.parseAuto(text);
+                if (rows.length < 2) throw new Error("Archivo vacío");
+
+                let parsedCount = 0;
+                let isFirstRow = true;
+
+                for (const row of rows) {
+                    // Cols: Congregación | No. Telefónico | Nombre discursante | Canción | Título | Fecha | Horario | Comentarios
+                    if (isFirstRow && row[0].toLowerCase().includes('congregaci')) { isFirstRow = false; continue; }
+                    if (row.length < 5) continue;
+
+                    const congregation = row[0].trim();
+                    const phone = PhoneUtils.validate(row[1].trim());
+                    const speakerName = row[2].trim();
+                    const song = row[3].trim();
+                    const titleRaw = row[4].trim();
+                    const rawDate = row[5] || '';
+                    const rawTime = row[6] || '';
+                    const comments = row[7] || '';
+
+                    if (!speakerName || !titleRaw || !rawDate) continue;
+
+                    // Extract outline from title (e.g., "189 Andar con Dios...")
+                    let outline = '';
+                    let title = titleRaw;
+                    const numMatch = titleRaw.match(/^(\d+)[-\s]+(.*)/);
+                    if (numMatch) {
+                        outline = numMatch[1];
+                        title = numMatch[2].trim();
+                    }
+
+                    const formattedDate = this.parseSpanishDate(rawDate);
+                    if (!formattedDate) continue; // Skip if date is invalid
+
+                    const formattedTime = this.parseTime(rawTime);
+
+                    const data = {
+                        id: crypto.randomUUID(),
+                        speaker_name: speakerName,
+                        speaker_phone: phone,
+                        congregation_origin: congregation,
+                        outline_number: outline,
+                        talk_title: title,
+                        song_number: song,
+                        date: formattedDate,
+                        time: formattedTime,
+                        comments: comments
+                    };
+
+                    State.incoming.push(data);
+                    parsedCount++;
+                }
+
+                State.saveToStorage('speaker_app_incoming', State.incoming);
+                this.renderList(document.querySelector('.event-list'), State.incoming);
+                window.showToast(`Se importaron ${parsedCount} visitas`, 'success');
+
+            } catch (error) {
+                console.error("Error importing CSV:", error);
+                window.showToast('Error al importar CSV', 'danger');
+            }
+            event.target.value = '';
+        };
+        reader.readAsText(file);
     }
 };
 

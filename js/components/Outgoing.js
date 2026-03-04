@@ -1,5 +1,7 @@
 import { State } from '../context/state.js';
 import { EventService } from '../services/EventService.js';
+import { CSVUtils } from '../utils/csv.js';
+import { PhoneUtils } from '../utils/phone.js';
 
 export const Outgoing = {
     selectedIds: new Set(),
@@ -15,11 +17,17 @@ export const Outgoing = {
                     <i data-lucide="trash-2"></i> Borrar
                 </button>
             </div>
-            <div class="view-header">
+            <div class="view-header" style="flex-wrap: wrap; gap: 0.5rem">
                 <h2>Discursantes que Van</h2>
-                <button class="btn btn-primary" id="btn-add-event">
-                    <i data-lucide="plus"></i> Agendar Salida
-                </button>
+                <div style="display: flex; gap: 0.5rem; flex: 1; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <label class="btn btn-secondary btn-small" style="cursor: pointer; margin: 0">
+                        <i data-lucide="upload"></i> Importar CSV
+                        <input type="file" id="outgoing-import-csv" accept=".csv, .txt" class="hidden">
+                    </label>
+                    <button class="btn btn-primary btn-small" id="btn-add-event" style="margin: 0">
+                        <i data-lucide="plus"></i> Agendar Salida
+                    </button>
+                </div>
             </div>
 
             <div class="event-list">
@@ -34,6 +42,8 @@ export const Outgoing = {
 
     initEvents(container) {
         container.querySelector('#btn-add-event').addEventListener('click', () => this.showModal());
+        const importInput = container.querySelector('#outgoing-import-csv');
+        if (importInput) importInput.addEventListener('change', (e) => this.handleImportCSV(e));
         if (window.lucide) window.lucide.createIcons();
     },
 
@@ -274,6 +284,122 @@ export const Outgoing = {
         } else if (result.message) {
             window.showToast(result.message, 'warning');
         }
+    },
+
+    parseSpanishDate(dateStr) {
+        if (!dateStr) return '';
+        const months = { 'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04', 'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08', 'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12' };
+        const str = dateStr.toLowerCase();
+        for (const [monthName, monthNum] of Object.entries(months)) {
+            if (str.includes(monthName)) {
+                const match = str.match(/(\d{1,2})\s+de\s+[a-z]+\s+de\s+(\d{4})/);
+                if (match) {
+                    const d = match[1].padStart(2, '0');
+                    return `${match[2]}-${monthNum}-${d}`;
+                }
+            }
+        }
+        const d = new Date(dateStr);
+        if (!isNaN(d)) return d.toISOString().split('T')[0];
+        return '';
+    },
+
+    parseTime(timeStr) {
+        if (!timeStr) return '10:00';
+        let match = timeStr.match(/(\d{1,2}):(\d{2})([^a-z]*)([ap]\.?\s?m\.?)/i);
+        if (match) {
+            let h = parseInt(match[1]);
+            const m = match[2];
+            const ampm = match[4].toLowerCase().replace(/\./g, '').trim();
+            if (ampm === 'pm' && h < 12) h += 12;
+            if (ampm === 'am' && h === 12) h = 0;
+            return `${h.toString().padStart(2, '0')}:${m}`;
+        }
+        return '10:00';
+    },
+
+    handleImportCSV(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target.result;
+                const rows = CSVUtils.parseAuto(text);
+                if (rows.length < 2) throw new Error("Archivo vacío");
+
+                let parsedCount = 0;
+                let isFirstRow = true;
+
+                for (const row of rows) {
+                    // Cols: Congregación | Contacto Congregación | Domicilio | Nombre discursante | No. Bosquejo | Título | Fecha | Horario | Comentarios
+                    if (isFirstRow && row[0].toLowerCase().includes('congregaci')) { isFirstRow = false; continue; }
+                    if (row.length < 7) continue;
+
+                    const congregation = row[0].trim();
+                    const speakerName = row[3].trim();
+                    const outline = row[4].trim();
+                    const title = row[5].trim();
+                    const rawDate = row[6] || '';
+                    const rawTime = row[7] || '';
+                    const comments = row[8] || '';
+
+                    if (!speakerName || !title || !rawDate) continue;
+
+                    const formattedDate = this.parseSpanishDate(rawDate);
+                    if (!formattedDate) continue;
+
+                    const formattedTime = this.parseTime(rawTime);
+
+                    // Find or create speaker
+                    let speaker = State.authorized.find(s => s.name.toLowerCase() === speakerName.toLowerCase());
+                    if (!speaker) {
+                        speaker = {
+                            id: crypto.randomUUID(),
+                            name: speakerName,
+                            phone: '',
+                            contact_secondary: '',
+                            comments: 'Auto-importado desde Van',
+                            talks: []
+                        };
+                        State.authorized.push(speaker);
+                        State.saveToStorage('speaker_app_authorized', State.authorized);
+                    }
+
+                    // Add talk if missing in speaker's profile
+                    if (!speaker.talks.find(t => t.outline == outline) && outline) {
+                        speaker.talks.push({ outline, title, song: '' });
+                        State.saveToStorage('speaker_app_authorized', State.authorized);
+                    }
+
+                    const data = {
+                        id: crypto.randomUUID(),
+                        speaker_id: speaker.id,
+                        destination_congregation: congregation,
+                        outline_number: outline,
+                        talk_title: title,
+                        song_number: '', // No song column in their picture for Outgoing
+                        date: formattedDate,
+                        time: formattedTime,
+                        comments: comments
+                    };
+
+                    State.outgoing.push(data);
+                    parsedCount++;
+                }
+
+                State.saveToStorage('speaker_app_outgoing', State.outgoing);
+                this.renderList(document.querySelector('.event-list'), State.outgoing);
+                window.showToast(`Se importaron ${parsedCount} salidas`, 'success');
+
+            } catch (error) {
+                console.error("Error importing CSV:", error);
+                window.showToast('Error al importar CSV', 'danger');
+            }
+            event.target.value = '';
+        };
+        reader.readAsText(file);
     }
 };
 
