@@ -1,4 +1,4 @@
-const CACHE_NAME = 'speaker-scheduler-v3.1';
+const CACHE_NAME = 'speaker-scheduler-v4.0';
 const ASSETS = [
     './',
     './index.html',
@@ -11,6 +11,10 @@ const ASSETS = [
     './css/data.css',
     './js/app.js',
     './js/context/state.js',
+    './js/utils/phone.js',
+    './js/utils/csv.js',
+    './js/services/EventService.js',
+    './js/services/NotificationService.js',
     './js/components/Dashboard.js',
     './js/components/Authorized.js',
     './js/components/Outgoing.js',
