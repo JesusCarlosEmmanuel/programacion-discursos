@@ -91,6 +91,12 @@ export const Masters = {
                                 <strong>${item.contact_name || 'Sin nombre'}</strong>
                                 <p><i data-lucide="phone"></i> ${item.contact_phone || '---'}</p>
                                 ${item.contact_email ? `<p><i data-lucide="mail"></i> ${item.contact_email}</p>` : ''}
+                                ${item.contact_phone ? `
+                                <div style="display:flex; gap:0.5rem; margin-top:0.5rem" onclick="event.stopPropagation()">
+                                    <a href="tel:${item.contact_phone}" class="btn btn-primary btn-small" style="flex:1; justify-content:center; text-decoration:none; padding:4px;"><i data-lucide="phone" style="width:14px; height:14px"></i> Llamar</a>
+                                    <button class="btn btn-secondary btn-small" onclick="window.open('https://wa.me/${item.contact_phone.replace(/\\D/g, '')}', '_blank')" style="flex:1; justify-content:center; padding:4px;"><i data-lucide="message-square" style="width:14px; height:14px"></i> Whats</button>
+                                </div>
+                                ` : ''}
                             </div>
                             ${item.contact2_name ? `
                             <div class="contact-item">
@@ -98,6 +104,12 @@ export const Masters = {
                                 <strong>${item.contact2_name}</strong>
                                 <p><i data-lucide="phone"></i> ${item.contact2_phone || '---'}</p>
                                 ${item.contact2_email ? `<p><i data-lucide="mail"></i> ${item.contact2_email}</p>` : ''}
+                                ${item.contact2_phone ? `
+                                <div style="display:flex; gap:0.5rem; margin-top:0.5rem" onclick="event.stopPropagation()">
+                                    <a href="tel:${item.contact2_phone}" class="btn btn-primary btn-small" style="flex:1; justify-content:center; text-decoration:none; padding:4px;"><i data-lucide="phone" style="width:14px; height:14px"></i> Llamar</a>
+                                    <button class="btn btn-secondary btn-small" onclick="window.open('https://wa.me/${item.contact2_phone.replace(/\\D/g, '')}', '_blank')" style="flex:1; justify-content:center; padding:4px;"><i data-lucide="message-square" style="width:14px; height:14px"></i> Whats</button>
+                                </div>
+                                ` : ''}
                             </div>
                             ` : ''}
                         </div>
