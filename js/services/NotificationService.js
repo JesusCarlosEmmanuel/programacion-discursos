@@ -58,7 +58,8 @@ export const NotificationService = {
             }
         } else {
             // Incoming
-            const origin = State.origins.find(o => o.name === event.congregation_origin) || {};
+            const combined = [...State.destinations, ...State.origins];
+            const origin = combined.find(o => o.name === event.congregation_origin) || {};
             if (target === 'speaker') {
                 message = `${greeting} hermano ${speaker.name}, te recordamos que te esperamos este próximo ${dayName} ${event.date} a las ${event.time} en nuestra congregación "${local.name || ''}".\n\n📍 Dirección: ${local.address || '---'}\n\nPresentarás el tema #${event.outline_number} "${event.talk_title}"${event.song_number ? ` (Cántico ${event.song_number})` : ''}.\n\nCualquier duda, tu contacto es: ${local.scheduler?.name || 'el coordinador'} (${local.scheduler?.phone || '---'}). ¡Te esperamos!`;
             } else if (target === 'coordinator') {

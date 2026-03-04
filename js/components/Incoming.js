@@ -186,7 +186,12 @@ export const Incoming = {
                         <label>Congregación de Origen</label>
                         <input type="text" id="e-origin" list="origin-list" value="${event.congregation_origin}" required placeholder="Buscar o escribir (Ej. Central)">
                         <datalist id="origin-list">
-                            ${State.origins.map(o => `<option value="${o.name}">`).join('')}
+                            ${[...State.destinations, ...State.origins]
+                .reduce((acc, curr) => {
+                    if (!acc.find(item => item.name === curr.name)) acc.push(curr);
+                    return acc;
+                }, [])
+                .map(o => `<option value="${o.name}">`).join('')}
                         </datalist>
                         <p class="hint-text" id="origin-hint">
                             ${originCong ? (
@@ -254,10 +259,16 @@ export const Incoming = {
         const originInput = modal.querySelector('#e-origin');
         if (originInput) {
             originInput.addEventListener('input', (e) => {
-                const selectedCong = State.origins.find(o => o.name === e.target.value);
+                const combined = [...State.destinations, ...State.origins];
+                const selectedCong = combined.find(o => o.name === e.target.value);
                 if (selectedCong) {
                     if (selectedCong.meeting_time) {
                         modal.querySelector('#e-time').value = selectedCong.meeting_time;
+                    }
+                    if (selectedCong.address) {
+                        // Store address and day in the event object indirectly or show in hint
+                        // The user wants these to be "filled", so we should ideally have fields for them 
+                        // even if they are just for notification purposes.
                     }
                     const hintEl = modal.querySelector('#origin-hint');
                     if (hintEl) {
