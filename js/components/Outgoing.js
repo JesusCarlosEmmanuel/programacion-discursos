@@ -139,9 +139,16 @@ export const Outgoing = {
     },
 
     showModal(id = null) {
-        const event = id ? State.outgoing.find(e => e.id === id) : {
+        let event = id ? State.outgoing.find(e => e.id === id) : {
             speaker_id: '', outline_number: '', talk_title: '', song_number: '', destination_congregation: '', date: '', time: '10:00', comments: ''
         };
+
+        if (!id) {
+            const draft = localStorage.getItem('draft_outgoing');
+            if (draft) {
+                try { event = { ...event, ...JSON.parse(draft) }; } catch (e) { }
+            }
+        }
 
         const modal = document.getElementById('modal-container');
         modal.classList.remove('hidden');
@@ -165,13 +172,22 @@ export const Outgoing = {
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" style="position: relative;">
                         <label>Congregación Destino</label>
-                        <input type="text" id="e-destination" list="dest-list" value="${event.destination_congregation}" required placeholder="Nombre de la congregación">
+                        <i data-lucide="search" style="position: absolute; left: 10px; top: 38px; width: 18px; color: #94a3b8; pointer-events: none;"></i>
+                        <input type="text" id="e-destination" list="dest-list" value="${event.destination_congregation}" required placeholder="Buscar o escribir (Ej. Central)" style="padding-left: 35px;" autocomplete="off">
                         <datalist id="dest-list">
                             ${destinations.map(d => `<option value="${d.name}">`).join('')}
                         </datalist>
-                        ${destCong ? `<p class="hint-text">Contacto: ${destCong.contact_name} (${destCong.contact_phone})</p>` : ''}
+                        <p class="hint-text" id="dest-hint">
+                            ${destCong ? (
+                [destCong.address ? `📍 ${destCong.address}` : '',
+                destCong.meeting_day ? `📅 ${destCong.meeting_day}` : ''
+                ].filter(Boolean).join(' | ') +
+                (destCong.address || destCong.meeting_day ? '<br>' : '') +
+                `Contacto: ${destCong.contact_name} (${destCong.contact_phone})`
+            ) : ''}
+                        </p>
                     </div>
 
                     <div class="form-section-title">Detalles de la Asignación</div>
@@ -206,8 +222,9 @@ export const Outgoing = {
                         <textarea id="e-comments" placeholder="Notas adicionales">${event.comments || ''}</textarea>
                     </div>
 
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" id="btn-close-modal">Cancelar</button>
+                    <div class="form-actions" style="margin-top: 1.5rem">
+                        <button type="button" class="btn btn-secondary" onclick="Outgoing.closeModal()">Cancelar</button>
+                        <button type="button" class="btn btn-secondary" onclick="Outgoing.clearForm()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">Limpiar</button>
                         <button type="submit" class="btn btn-primary">${id ? 'Actualizar' : 'Agendar Salida'}</button>
                     </div>
                 </form>
@@ -215,16 +232,77 @@ export const Outgoing = {
         `;
 
         if (window.lucide) window.lucide.createIcons();
-        modal.querySelector('#btn-close-modal').addEventListener('click', () => modal.classList.add('hidden'));
+
+        const form = document.getElementById('event-form');
+
+        // Autofill logic
+        const destInput = modal.querySelector('#e-destination');
+        if (destInput) {
+            destInput.addEventListener('input', (e) => {
+                const selectedCong = State.destinations.find(d => d.name === e.target.value);
+                if (selectedCong) {
+                    if (selectedCong.meeting_time) {
+                        modal.querySelector('#e-time').value = selectedCong.meeting_time;
+                    }
+                    const hintEl = modal.querySelector('#dest-hint');
+                    if (hintEl) {
+                        let hint = [];
+                        if (selectedCong.address) hint.push(`📍 ${selectedCong.address}`);
+                        if (selectedCong.meeting_day) hint.push(`📅 ${selectedCong.meeting_day}`);
+                        const hintText = hint.length > 0 ? hint.join(' | ') + '<br>' : '';
+                        hintEl.innerHTML = hintText + `Contacto: ${selectedCong.contact_name} (${selectedCong.contact_phone})`;
+                    }
+                }
+            });
+        }
 
         // Auto-fill title and song from speaker if outline matches
         modal.querySelector('#e-speaker').addEventListener('change', (e) => this.autoFill(e.target.value));
         modal.querySelector('#e-outline').addEventListener('input', (e) => this.autoFill(modal.querySelector('#e-speaker').value, e.target.value));
 
-        modal.querySelector('#event-form').addEventListener('submit', (e) => {
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleSave(id);
+            if (!id) localStorage.removeItem('draft_outgoing');
         });
+
+        // Draft logic
+        const saveDraft = () => {
+            if (id) return;
+            const draft = {
+                speaker_id: document.getElementById('e-speaker').value,
+                destination_congregation: document.getElementById('e-destination').value,
+                outline_number: document.getElementById('e-outline').value,
+                talk_title: document.getElementById('e-title').value,
+                song_number: document.getElementById('e-song').value,
+                date: document.getElementById('e-date').value,
+                time: document.getElementById('e-time').value,
+                comments: document.getElementById('e-comments').value
+            };
+            localStorage.setItem('draft_outgoing', JSON.stringify(draft));
+        };
+
+        window.onclick = (event) => {
+            if (event.target === modal) {
+                saveDraft();
+                this.closeModal();
+            }
+        };
+
+        form.addEventListener('input', saveDraft);
+        form.addEventListener('change', saveDraft); // Listen to select changes
+    },
+
+    clearForm() {
+        if (confirm('¿Estás seguro de limpiar todo el formulario?')) {
+            document.getElementById('event-form').reset();
+            localStorage.removeItem('draft_outgoing');
+        }
+    },
+
+    closeModal() {
+        document.getElementById('modal-container').classList.add('hidden');
+        window.onclick = null;
     },
 
     sharePreview(id) {

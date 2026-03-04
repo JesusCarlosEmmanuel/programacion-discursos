@@ -139,9 +139,16 @@ export const Incoming = {
     },
 
     showModal(id = null) {
-        const event = id ? State.incoming.find(e => e.id === id) : {
+        let event = id ? State.incoming.find(e => e.id === id) : {
             speaker_name: '', speaker_phone: '', congregation_origin: '', outline_number: '', talk_title: '', song_number: '', date: '', time: '12:00', contact_secondary: '', comments: ''
         };
+
+        if (!id) {
+            const draft = localStorage.getItem('draft_incoming');
+            if (draft) {
+                try { event = { ...event, ...JSON.parse(draft) }; } catch (e) { }
+            }
+        }
 
         const modal = document.getElementById('modal-container');
         modal.classList.remove('hidden');
@@ -170,11 +177,19 @@ export const Incoming = {
 
                     <div class="form-group">
                         <label>Congregación de Origen</label>
-                        <input type="text" id="e-origin" list="origin-list" value="${event.congregation_origin}" required placeholder="Buscar o escribir...">
+                        <input type="text" id="e-origin" list="origin-list" value="${event.congregation_origin}" required placeholder="Buscar o escribir (Ej. Central)">
                         <datalist id="origin-list">
                             ${State.origins.map(o => `<option value="${o.name}">`).join('')}
                         </datalist>
-                        ${originCong ? `<p class="hint-text">Contacto: ${originCong.contact_name} (${originCong.contact_phone})</p>` : ''}
+                        <p class="hint-text" id="origin-hint">
+                            ${originCong ? (
+                [originCong.address ? `📍 ${originCong.address}` : '',
+                originCong.meeting_day ? `📅 ${originCong.meeting_day}` : ''
+                ].filter(Boolean).join(' | ') +
+                (originCong.address || originCong.meeting_day ? '<br>' : '') +
+                `Contacto: ${originCong.contact_name} (${originCong.contact_phone})`
+            ) : ''}
+                        </p>
                     </div>
 
                     <div class="form-section-title">Detalles del Discurso</div>
@@ -209,8 +224,9 @@ export const Incoming = {
                         <textarea id="e-comments" placeholder="Ej: Necesita transporte, dieta especial, etc.">${event.comments || ''}</textarea>
                     </div>
 
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" id="btn-close-modal">Cancelar</button>
+                    <div class="form-actions" style="margin-top: 1.5rem">
+                        <button type="button" class="btn btn-secondary" onclick="Incoming.closeModal()">Cancelar</button>
+                        <button type="button" class="btn btn-secondary" onclick="Incoming.clearForm()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">Limpiar</button>
                         <button type="submit" class="btn btn-primary">${id ? 'Actualizar' : 'Agendar Visita'}</button>
                     </div>
                 </form>
@@ -218,12 +234,73 @@ export const Incoming = {
         `;
 
         if (window.lucide) window.lucide.createIcons();
-        modal.querySelector('#btn-close-modal').addEventListener('click', () => modal.classList.add('hidden'));
 
-        modal.querySelector('#event-form').addEventListener('submit', (e) => {
+        const form = document.getElementById('event-form');
+
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleSave(id);
+            if (!id) localStorage.removeItem('draft_incoming');
         });
+
+        // Autofill logic
+        const originInput = modal.querySelector('#e-origin');
+        if (originInput) {
+            originInput.addEventListener('input', (e) => {
+                const selectedCong = State.origins.find(o => o.name === e.target.value);
+                if (selectedCong) {
+                    if (selectedCong.meeting_time) {
+                        modal.querySelector('#e-time').value = selectedCong.meeting_time;
+                    }
+                    const hintEl = modal.querySelector('#origin-hint');
+                    if (hintEl) {
+                        let hint = [];
+                        if (selectedCong.address) hint.push(`📍 ${selectedCong.address}`);
+                        if (selectedCong.meeting_day) hint.push(`📅 ${selectedCong.meeting_day}`);
+                        const hintText = hint.length > 0 ? hint.join(' | ') + '<br>' : '';
+                        hintEl.innerHTML = hintText + `Contacto: ${selectedCong.contact_name} (${selectedCong.contact_phone})`;
+                    }
+                }
+            });
+        }
+
+        // Draft logic
+        const saveDraft = () => {
+            if (id) return;
+            const draft = {
+                speaker_name: document.getElementById('e-name').value,
+                speaker_phone: document.getElementById('e-phone').value,
+                congregation_origin: document.getElementById('e-origin').value,
+                outline_number: document.getElementById('e-outline').value,
+                talk_title: document.getElementById('e-title').value,
+                song_number: document.getElementById('e-song').value,
+                date: document.getElementById('e-date').value,
+                time: document.getElementById('e-time').value,
+                comments: document.getElementById('e-comments').value
+            };
+            localStorage.setItem('draft_incoming', JSON.stringify(draft));
+        };
+
+        window.onclick = (event) => {
+            if (event.target === modal) {
+                saveDraft();
+                this.closeModal();
+            }
+        };
+
+        form.addEventListener('input', saveDraft);
+    },
+
+    clearForm() {
+        if (confirm('¿Estás seguro de limpiar todo el formulario?')) {
+            document.getElementById('event-form').reset();
+            localStorage.removeItem('draft_incoming');
+        }
+    },
+
+    closeModal() {
+        document.getElementById('modal-container').classList.add('hidden');
+        window.onclick = null;
     },
 
     sharePreview(id) {

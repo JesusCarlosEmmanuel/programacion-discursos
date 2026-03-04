@@ -170,7 +170,14 @@ export const Authorized = {
     },
 
     showModal(id = null) {
-        const speaker = id ? State.authorized.find(s => s.id === id) : { name: '', phone: '', talks: [], contact_secondary: '', comments: '' };
+        let speaker = id ? State.authorized.find(s => s.id === id) : { name: '', phone: '', talks: [], contact_secondary: '', comments: '' };
+
+        if (!id) {
+            const draft = localStorage.getItem('draft_speaker');
+            if (draft) {
+                try { speaker = { ...speaker, ...JSON.parse(draft) }; } catch (e) { }
+            }
+        }
         const modal = document.getElementById('modal-container');
         modal.classList.remove('hidden');
 
@@ -211,10 +218,11 @@ export const Authorized = {
                         <textarea id="speaker-comments" placeholder="Preferencias, fechas bloqueadas, etc.">${speaker.comments || ''}</textarea>
                     </div>
 
-                    <div class="modal-actions">
+                    <div class="form-actions" style="margin-top: 1.5rem">
                         <div style="display:flex; gap:10px">
-                            <button type="button" class="btn btn-secondary" id="btn-close-modal">Cancelar</button>
-                            ${id ? `<button type="button" class="btn btn-icon error" onclick="Authorized.handleSingleDelete('${id}'); document.getElementById('modal-container').classList.add('hidden')"><i data-lucide="trash-2"></i></button>` : ''}
+                            <button type="button" class="btn btn-secondary" onclick="Authorized.closeModal()">Cancelar</button>
+                            <button type="button" class="btn btn-secondary" onclick="Authorized.clearForm()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">Limpiar</button>
+                            ${id ? `<button type="button" class="btn btn-icon error" onclick="Authorized.handleSingleDelete('${id}'); Authorized.closeModal()"><i data-lucide="trash-2"></i></button>` : ''}
                         </div>
                         <button type="submit" class="btn btn-primary">Guardar Discursante</button>
                     </div>
@@ -224,7 +232,8 @@ export const Authorized = {
 
         if (window.lucide) window.lucide.createIcons();
 
-        modal.querySelector('#btn-close-modal').addEventListener('click', () => modal.classList.add('hidden'));
+        const form = modal.querySelector('#speaker-form');
+
         modal.querySelector('#btn-add-talk').addEventListener('click', () => {
             const list = modal.querySelector('#talks-list');
             const newIndex = list.children.length;
@@ -234,10 +243,45 @@ export const Authorized = {
             if (window.lucide) window.lucide.createIcons();
         });
 
-        modal.querySelector('#speaker-form').addEventListener('submit', (e) => {
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleSave(id);
+            if (!id) localStorage.removeItem('draft_speaker');
         });
+
+        // Draft logic
+        const saveDraft = () => {
+            if (id) return;
+            const draft = {
+                name: document.getElementById('speaker-name').value,
+                phone: document.getElementById('speaker-phone').value,
+                contact_secondary: document.getElementById('speaker-secondary').value,
+                comments: document.getElementById('speaker-comments').value,
+                talks: [] // Complex nested properties like talks bypassed for draft simplicity
+            };
+            localStorage.setItem('draft_speaker', JSON.stringify(draft));
+        };
+
+        window.onclick = (event) => {
+            if (event.target === modal) {
+                saveDraft();
+                this.closeModal();
+            }
+        };
+
+        form.addEventListener('input', saveDraft);
+    },
+
+    clearForm() {
+        if (confirm('¿Estás seguro de limpiar todo el formulario?')) {
+            document.getElementById('speaker-form').reset();
+            localStorage.removeItem('draft_speaker');
+        }
+    },
+
+    closeModal() {
+        document.getElementById('modal-container').classList.add('hidden');
+        window.onclick = null;
     },
 
     renderTalkField(talk, index) {

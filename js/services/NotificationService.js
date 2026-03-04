@@ -112,17 +112,21 @@ export const NotificationService = {
             const incoming = State.incoming.map(e => ({ ...e, type: 'incoming' }));
             const allEvents = [...outgoing, ...incoming];
 
-            const eightDaysReminders = allEvents.filter(a => {
+            const tenDaysReminders = allEvents.filter(a => {
                 const evDate = new Date(a.date + 'T12:00:00');
                 const diffTime = evDate.getTime() - now.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return diffDays === 8;
+                return diffDays === 10;
             });
 
-            if (eightDaysReminders.length > 0 && Notification.permission === "granted") {
-                new Notification("Recordatorios (8 días)", {
-                    body: `Tienes ${eightDaysReminders.length} discursos programados para dentro de 8 días. ¡Envía los recordatorios hoy!`,
-                });
+            if (tenDaysReminders.length > 0) {
+                localStorage.setItem('last_auto_check', todayStr);
+                window.showToast(`🔔 Tienes ${tenDaysReminders.length} recordatorios pendientes para enviar a 10 días.`, 'warning');
+                if (Notification.permission === "granted") {
+                    new Notification("Recordatorios (10 días)", {
+                        body: `Tienes ${tenDaysReminders.length} discursos programados para dentro de 10 días. ¡Envía los recordatorios hoy!`,
+                    });
+                }
             }
             localStorage.setItem('last_auto_check', todayStr);
         }

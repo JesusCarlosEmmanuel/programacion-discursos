@@ -83,6 +83,7 @@ export const Masters = {
                             <strong>${item.name}</strong>
                         </div>
                         <p class="address-line"><i data-lucide="map-pin"></i> ${item.address || 'Sin dirección'}</p>
+                        ${item.meeting_day ? `<p class="address-line"><i data-lucide="calendar"></i> Reunión: ${item.meeting_day} a las ${item.meeting_time || '--:--'}</p>` : ''}
                         
                         <div class="contacts-grid">
                             <div class="contact-item">
@@ -118,11 +119,19 @@ export const Masters = {
 
     showMasterModal(id = null) {
         const list = this.currentTab === 'destinations' ? State.destinations : State.origins;
-        const item = id ? list.find(i => i.id === id) : {
-            name: '', address: '',
+        let item = id ? list.find(i => i.id === id) : {
+            name: '', address: '', meeting_day: '', meeting_time: '',
             contact_name: '', contact_phone: '', contact_email: '',
             contact2_name: '', contact2_phone: '', contact2_email: ''
         };
+
+        // Load draft if new
+        if (!id) {
+            const draft = localStorage.getItem(`draft_master_${this.currentTab}`);
+            if (draft) {
+                try { item = { ...item, ...JSON.parse(draft) }; } catch (e) { }
+            }
+        }
 
         const modal = document.getElementById('modal-container');
         modal.classList.remove('hidden');
@@ -138,6 +147,26 @@ export const Masters = {
                     <div class="form-group">
                         <label>Dirección / Ubicación</label>
                         <input type="text" id="m-address" value="${item.address || ''}" placeholder="Calle, número, ciudad">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Día de Reunión</label>
+                            <select id="m-meeting-day">
+                                <option value="">Seleccionar día</option>
+                                <option value="Lunes" ${item.meeting_day === 'Lunes' ? 'selected' : ''}>Lunes</option>
+                                <option value="Martes" ${item.meeting_day === 'Martes' ? 'selected' : ''}>Martes</option>
+                                <option value="Miércoles" ${item.meeting_day === 'Miércoles' ? 'selected' : ''}>Miércoles</option>
+                                <option value="Jueves" ${item.meeting_day === 'Jueves' ? 'selected' : ''}>Jueves</option>
+                                <option value="Viernes" ${item.meeting_day === 'Viernes' ? 'selected' : ''}>Viernes</option>
+                                <option value="Sábado" ${item.meeting_day === 'Sábado' ? 'selected' : ''}>Sábado</option>
+                                <option value="Domingo" ${item.meeting_day === 'Domingo' ? 'selected' : ''}>Domingo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Horario</label>
+                            <input type="time" id="m-meeting-time" value="${item.meeting_time || ''}">
+                        </div>
                     </div>
                     
                     <div class="form-section-title">Contacto Principal</div>
@@ -172,8 +201,9 @@ export const Masters = {
                         </div>
                     </div>
 
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-container').classList.add('hidden')">Cancelar</button>
+                    <div class="form-actions" style="margin-top: 1.5rem">
+                        <button type="button" class="btn btn-secondary" onclick="Masters.closeModal()">Cancelar</button>
+                        <button type="button" class="btn btn-secondary" onclick="Masters.clearForm()" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">Limpiar</button>
                         <button type="submit" class="btn btn-primary">Guardar</button>
                     </div>
                 </form>
@@ -182,17 +212,75 @@ export const Masters = {
 
         if (window.lucide) window.lucide.createIcons();
 
-        document.getElementById('master-form').addEventListener('submit', (e) => {
+        const form = document.getElementById('master-form');
+        form.onsubmit = (e) => {
             e.preventDefault();
-            this.saveMaster(id);
-        });
+            const data = {
+                id: id || crypto.randomUUID(),
+                name: document.getElementById('m-name').value.trim(),
+                address: document.getElementById('m-address').value.trim(),
+                meeting_day: document.getElementById('m-meeting-day').value,
+                meeting_time: document.getElementById('m-meeting-time').value,
+                contact_name: document.getElementById('m-contact-name').value.trim(),
+                contact_phone: PhoneUtils.validate(document.getElementById('m-contact-phone').value),
+                contact_email: document.getElementById('m-contact-email').value,
+                contact2_name: document.getElementById('m-contact2-name').value,
+                contact2_phone: PhoneUtils.validate(document.getElementById('m-contact2-phone').value),
+                contact2_email: document.getElementById('m-contact2-email').value,
+            };
+
+            State.saveMaster(this.currentTab, data);
+
+            // Clear draft if successful
+            if (!id) localStorage.removeItem(`draft_master_${this.currentTab}`);
+
+            this.closeModal();
+            window.showToast('Actualizado correctamente', 'success');
+            this.renderList(document.querySelector('.masters-view'));
+        };
+
+        if (window.lucide) window.lucide.createIcons();
+
+        // Draft saving logic
+        const saveDraft = () => {
+            if (id) return; // Only save drafts for new items
+            const draft = {
+                name: document.getElementById('m-name').value,
+                address: document.getElementById('m-address').value,
+                meeting_day: document.getElementById('m-meeting-day').value,
+                meeting_time: document.getElementById('m-meeting-time').value,
+                contact_name: document.getElementById('m-contact-name').value,
+                contact_phone: document.getElementById('m-contact-phone').value,
+                contact_email: document.getElementById('m-contact-email').value,
+                contact2_name: document.getElementById('m-contact2-name').value,
+                contact2_phone: document.getElementById('m-contact2-phone').value,
+                contact2_email: document.getElementById('m-contact2-email').value,
+            };
+            localStorage.setItem(`draft_master_${this.currentTab}`, JSON.stringify(draft));
+        };
+
+        // Click outside to close and save draft
+        window.onclick = (event) => {
+            if (event.target === modal) {
+                saveDraft();
+                this.closeModal();
+            }
+        };
+
+        // Save draft on input change
+        form.addEventListener('input', saveDraft);
     },
 
     saveMaster(id) {
+        // This function is now inlined into showMasterModal's form.onsubmit
+        // Keeping it here for backward compatibility or if it's called elsewhere.
+        // If not called elsewhere, it can be removed.
         const data = {
             id: id || crypto.randomUUID(),
             name: document.getElementById('m-name').value,
             address: document.getElementById('m-address').value,
+            meeting_day: document.getElementById('m-meeting-day').value,
+            meeting_time: document.getElementById('m-meeting-time').value,
             contact_name: document.getElementById('m-contact-name').value,
             contact_phone: PhoneUtils.validate(document.getElementById('m-contact-phone').value),
             contact_email: document.getElementById('m-contact-email').value,
@@ -222,6 +310,18 @@ export const Masters = {
             State.saveMaster(this.currentTab, backup);
             this.renderList(document.querySelector('.masters-view'));
         });
+    },
+
+    clearForm() {
+        if (confirm('¿Estás seguro de limpiar todo el formulario?')) {
+            document.getElementById('master-form').reset();
+            localStorage.removeItem(`draft_master_${this.currentTab}`);
+        }
+    },
+
+    closeModal() {
+        document.getElementById('modal-container').classList.add('hidden');
+        window.onclick = null; // Remove the global click listener
     },
 
     handleImportCSV(event) {
