@@ -160,7 +160,14 @@ export const Outgoing = {
             <div class="modal-content card">
                 <div class="modal-header">
                     <h3>${id ? 'Editar' : 'Programar'} Salida</h3>
-                    ${id ? `<button class="btn btn-secondary btn-small" onclick="Outgoing.sharePreview('${id}')"><i data-lucide="image"></i> Generar Confirmación</button>` : ''}
+                    ${id ? `
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <span style="font-size:0.75rem; color:#94a3b8; margin-right:5px">Notificar:</span>
+                        <button type="button" class="btn btn-secondary btn-small" title="Al Discursante" onclick="Outgoing.shareWhatsApp('${id}', 'speaker')"><i data-lucide="user"></i></button>
+                        <button type="button" class="btn btn-secondary btn-small" title="A Coord. Anfitrión" onclick="Outgoing.shareWhatsApp('${id}', 'coordinator')"><i data-lucide="map-pin"></i></button>
+                        <button type="button" class="btn btn-secondary btn-small" title="A Coord. Local" onclick="Outgoing.shareWhatsApp('${id}', 'local_coordinator')"><i data-lucide="home"></i></button>
+                    </div>
+                    ` : ''}
                 </div>
                 <form id="event-form">
                     <div class="form-section-title">Discursante de Mi Congregación</div>
@@ -303,6 +310,12 @@ export const Outgoing = {
     closeModal() {
         document.getElementById('modal-container').classList.add('hidden');
         window.onclick = null;
+    },
+
+    shareWhatsApp(id, target) {
+        import('../services/NotificationService.js').then(({ NotificationService }) => {
+            NotificationService.openWhatsApp('outgoing', id, target);
+        });
     },
 
     sharePreview(id) {

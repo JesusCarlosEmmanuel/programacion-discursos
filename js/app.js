@@ -6,6 +6,7 @@ import { Incoming } from './components/Incoming.js';
 import { Reports } from './components/Reports.js';
 import { DataManagement } from './components/DataManagement.js';
 import { Masters } from './components/Masters.js';
+import { Calendar } from './components/Calendar.js';
 
 // Global exposure for debugging and inline event handlers
 window.State = State;
@@ -16,6 +17,7 @@ window.Incoming = Incoming;
 window.Reports = Reports;
 window.DataManagement = DataManagement;
 window.Masters = Masters;
+window.Calendar = Calendar;
 
 /**
  * Simple SPA Router
@@ -29,6 +31,7 @@ class Router {
             authorized: Authorized,
             outgoing: Outgoing,
             incoming: Incoming,
+            calendar: Calendar,
             reports: Reports,
             data: DataManagement,
             masters: Masters

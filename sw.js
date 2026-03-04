@@ -1,4 +1,4 @@
-const CACHE_NAME = 'speaker-scheduler-v4.2';
+const CACHE_NAME = 'speaker-scheduler-v4.3';
 const ASSETS = [
     './',
     './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
     './css/authorized.css',
     './css/events.css',
     './css/reports.css',
+    './css/calendar.css',
     './css/data.css',
     './js/app.js',
     './js/context/state.js',
@@ -22,6 +23,7 @@ const ASSETS = [
     './js/components/Reports.js',
     './js/components/DataManagement.js',
     './js/components/Masters.js',
+    './js/components/Calendar.js',
     'https://unpkg.com/lucide@latest',
     'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
     'https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js',

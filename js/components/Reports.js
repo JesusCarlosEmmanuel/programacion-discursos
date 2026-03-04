@@ -45,8 +45,11 @@ export const Reports = {
             </div>
 
             <div class="report-actions">
+                <button class="btn btn-secondary" id="btn-share-wa">
+                    <i data-lucide="message-square"></i> WhatsApp
+                </button>
                 <button class="btn btn-secondary" id="btn-share-img">
-                    <i data-lucide="share-2"></i> Compartir Imagen
+                    <i data-lucide="image"></i> Imagen
                 </button>
             </div>
         `;
@@ -63,6 +66,14 @@ export const Reports = {
 
         container.querySelector('#btn-filter').addEventListener('click', () => this.generateReport(container));
         container.querySelector('#btn-share-img').addEventListener('click', () => this.shareAsImage());
+        container.querySelector('#btn-share-wa').addEventListener('click', () => {
+            if (!this.lastEvents) return window.showToast('Generando reporte primero', 'warning');
+            const typeFilter = container.querySelector('#filter-type').value;
+            const rangeText = container.querySelector('#report-range-text').textContent;
+            import('../services/NotificationService.js').then(({ NotificationService }) => {
+                NotificationService.shareSupervisorReport(this.lastEvents, rangeText, typeFilter);
+            });
+        });
 
         // Initial generation
         setTimeout(() => this.generateReport(container), 100);
@@ -89,6 +100,8 @@ export const Reports = {
             const matchesType = type === 'all' || e.type === type;
             return matchesDate && matchesType;
         }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        this.lastEvents = allEvents;
 
         if (allEvents.length === 0) {
             reportContent.innerHTML = '<p class="empty-state">No hay datos en este rango.</p>';

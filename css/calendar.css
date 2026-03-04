@@ -1,0 +1,83 @@
+.calendar-view {
+    padding-bottom: 80px;
+}
+
+.calendar-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.calendar-controls h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    min-width: 150px;
+    text-align: center;
+}
+
+.calendar-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.calendar-block {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+}
+
+.calendar-block:hover {
+    transform: translateY(-2px);
+}
+
+.calendar-block.assigned {
+    border-left: 6px solid var(--success);
+}
+
+.calendar-block.vacant {
+    border-left: 6px solid var(--danger);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.block-date {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    width: 60px;
+    text-align: center;
+}
+
+.block-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.calendar-block.assigned .block-status {
+    color: var(--success);
+}
+
+.calendar-block.vacant .block-status {
+    color: var(--danger);
+}
+
+.calendar-details-card p {
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+}
+
+.calendar-details-card p strong {
+    color: var(--text-primary);
+}

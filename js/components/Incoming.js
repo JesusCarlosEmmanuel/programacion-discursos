@@ -160,7 +160,14 @@ export const Incoming = {
             <div class="modal-content card">
                 <div class="modal-header">
                     <h3>${id ? 'Editar' : 'Programar'} Visita</h3>
-                    ${id ? `<button class="btn btn-secondary btn-small" onclick="Incoming.sharePreview('${id}')"><i data-lucide="image"></i> Generar Confirmación</button>` : ''}
+                    ${id ? `
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <span style="font-size:0.75rem; color:#94a3b8; margin-right:5px">Notificar:</span>
+                        <button type="button" class="btn btn-secondary btn-small" title="Al Discursante" onclick="Incoming.shareWhatsApp('${id}', 'speaker')"><i data-lucide="user"></i></button>
+                        <button type="button" class="btn btn-secondary btn-small" title="A Coord. Origen" onclick="Incoming.shareWhatsApp('${id}', 'coordinator')"><i data-lucide="map-pin"></i></button>
+                        <button type="button" class="btn btn-secondary btn-small" title="A Coord. Local" onclick="Incoming.shareWhatsApp('${id}', 'local_coordinator')"><i data-lucide="home"></i></button>
+                    </div>
+                    ` : ''}
                 </div>
                 <form id="event-form">
                     <div class="form-section-title">Datos del Discursante</div>
@@ -264,6 +271,31 @@ export const Incoming = {
             });
         }
 
+        // Duplicate warning logic
+        const checkDuplicate = () => {
+            const outline = document.getElementById('e-outline').value.trim();
+            const dateVal = document.getElementById('e-date').value;
+            if (!outline || !dateVal) return;
+
+            const current = new Date(dateVal + 'T12:00:00');
+            const threeMonthsAgo = new Date(current);
+            threeMonthsAgo.setMonth(current.getMonth() - 3);
+
+            const duplicates = State.incoming.filter(e => {
+                if (e.id === id) return false; // skip self
+                if (e.outline_number !== outline) return false;
+                const eDate = new Date(e.date + 'T12:00:00');
+                return eDate >= threeMonthsAgo && eDate <= current;
+            });
+
+            if (duplicates.length > 0) {
+                window.showToast(`⚠️ Aviso: El bosquejo #${outline} ya se programó localmente en los últimos 3 meses (${duplicates[0].date}).`, 'warning');
+            }
+        };
+
+        modal.querySelector('#e-outline').addEventListener('blur', checkDuplicate);
+        modal.querySelector('#e-date').addEventListener('change', checkDuplicate);
+
         // Draft logic
         const saveDraft = () => {
             if (id) return;
@@ -303,8 +335,14 @@ export const Incoming = {
         window.onclick = null;
     },
 
+    shareWhatsApp(id, target) {
+        import('../services/NotificationService.js').then(({ NotificationService }) => {
+            NotificationService.openWhatsApp('incoming', id, target);
+        });
+    },
+
     sharePreview(id) {
-        // This will navigate to reports with this specific event filtered
+        // Disabled since we use direct WhatsApp sharing now, but kept for legacy/compatibility
         const event = State.incoming.find(e => e.id === id);
         if (event) {
             window.router.navigate('reports');
