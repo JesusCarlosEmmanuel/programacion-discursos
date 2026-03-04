@@ -12,10 +12,6 @@ export const Masters = {
             <div class="view-header" style="flex-wrap: wrap; gap: 0.5rem">
                 <h2>Directorio de Congregaciones</h2>
                 <div style="display: flex; gap: 0.5rem; flex: 1; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-                    <div class="tabs" style="margin: 0">
-                        <button class="tab-btn active" id="tab-destinations">Destinos (Visitamos)</button>
-                        <button class="tab-btn" id="tab-origins">Orígenes (Nos visitan)</button>
-                    </div>
                     <label class="btn btn-secondary btn-small" style="cursor: pointer; margin: 0">
                         <i data-lucide="upload"></i> Importar CSV
                         <input type="file" id="masters-import-csv" accept=".csv, .txt" class="hidden">
@@ -34,19 +30,12 @@ export const Masters = {
             </div>
         `;
 
-        this.currentTab = 'destinations';
         this.initEvents(container);
         this.renderList(container);
         return container;
     },
 
     initEvents(container) {
-        container.querySelector('#tab-destinations').addEventListener('click', () => {
-            this.switchTab(container, 'destinations');
-        });
-        container.querySelector('#tab-origins').addEventListener('click', () => {
-            this.switchTab(container, 'origins');
-        });
         container.querySelector('#btn-add-master').addEventListener('click', () => {
             this.showMasterModal();
         });
@@ -57,16 +46,18 @@ export const Masters = {
         if (window.lucide) window.lucide.createIcons();
     },
 
-    switchTab(container, tab) {
-        this.currentTab = tab;
-        container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        container.querySelector(`#tab-${tab}`).classList.add('active');
-        this.renderList(container);
-    },
 
     renderList(container) {
         const content = container.querySelector('#masters-content');
-        const list = this.currentTab === 'destinations' ? State.destinations : State.origins;
+
+        // Merge without exact duplicates by ID
+        const combined = [...State.destinations];
+        State.origins.forEach(o => {
+            if (!combined.find(c => c.id === o.id)) combined.push(o);
+        });
+
+        // Sort alphabetically
+        const list = combined.sort((a, b) => a.name.localeCompare(b.name));
 
         if (list.length === 0) {
             content.innerHTML = `
@@ -130,8 +121,13 @@ export const Masters = {
     },
 
     showMasterModal(id = null) {
-        const list = this.currentTab === 'destinations' ? State.destinations : State.origins;
-        let item = id ? list.find(i => i.id === id) : {
+        // Merge without exact duplicates by ID to find the item to edit
+        const combined = [...State.destinations];
+        State.origins.forEach(o => {
+            if (!combined.find(c => c.id === o.id)) combined.push(o);
+        });
+
+        let item = id ? combined.find(i => i.id === id) : {
             name: '', address: '', meeting_day: '', meeting_time: '',
             contact_name: '', contact_phone: '', contact_email: '',
             contact2_name: '', contact2_phone: '', contact2_email: ''
@@ -139,7 +135,7 @@ export const Masters = {
 
         // Load draft if new
         if (!id) {
-            const draft = localStorage.getItem(`draft_master_${this.currentTab}`);
+            const draft = localStorage.getItem(`draft_master`);
             if (draft) {
                 try { item = { ...item, ...JSON.parse(draft) }; } catch (e) { }
             }
@@ -241,10 +237,19 @@ export const Masters = {
                 contact2_email: document.getElementById('m-contact2-email').value,
             };
 
-            State.saveMaster(this.currentTab, data);
+            // We save everything to 'destinations' to keep a unified list going forward.
+            // If the item previously existed in 'origins', we should ideally remove it from there 
+            // but `State.saveMaster` might not know how to cross-delete easily without modifying State.js.
+            // However, saving to 'destinations' is safer.
+            const wasOrigin = State.origins.some(o => o.id === data.id);
+            if (wasOrigin) {
+                State.saveMaster('origins', data); // Save back to origins if it came from there to avoid duplicates in the other array
+            } else {
+                State.saveMaster('destinations', data);
+            }
 
             // Clear draft if successful
-            if (!id) localStorage.removeItem(`draft_master_${this.currentTab}`);
+            if (!id) localStorage.removeItem(`draft_master`);
 
             this.closeModal();
             window.showToast('Actualizado correctamente', 'success');
@@ -268,7 +273,7 @@ export const Masters = {
                 contact2_phone: document.getElementById('m-contact2-phone').value,
                 contact2_email: document.getElementById('m-contact2-email').value,
             };
-            localStorage.setItem(`draft_master_${this.currentTab}`, JSON.stringify(draft));
+            localStorage.setItem(`draft_master`, JSON.stringify(draft));
         };
 
         // Click outside to close and save draft
@@ -284,9 +289,7 @@ export const Masters = {
     },
 
     saveMaster(id) {
-        // This function is now inlined into showMasterModal's form.onsubmit
-        // Keeping it here for backward compatibility or if it's called elsewhere.
-        // If not called elsewhere, it can be removed.
+        // Obsolete function, kept for backward compatibility if called manually
         const data = {
             id: id || crypto.randomUUID(),
             name: document.getElementById('m-name').value,
@@ -301,7 +304,12 @@ export const Masters = {
             contact2_email: document.getElementById('m-contact2-email').value,
         };
 
-        State.saveMaster(this.currentTab, data);
+        const wasOrigin = State.origins.some(o => o.id === data.id);
+        if (wasOrigin) {
+            State.saveMaster('origins', data);
+        } else {
+            State.saveMaster('destinations', data);
+        }
 
         document.getElementById('modal-container').classList.add('hidden');
         window.showToast('Actualizado correctamente', 'success');
@@ -311,15 +319,30 @@ export const Masters = {
     deleteMaster(id) {
         if (!confirm('¿Eliminar esta congregación?')) return;
 
-        const list = this.currentTab === 'destinations' ? State.destinations : State.origins;
-        const backup = list.find(i => i.id === id);
+        // Try to find in both and delete
+        const wasOrigin = State.origins.some(o => o.id === id);
+        const backup = wasOrigin
+            ? State.origins.find(i => i.id === id)
+            : State.destinations.find(i => i.id === id);
 
-        State.deleteMaster(this.currentTab, id);
+        if (wasOrigin) {
+            State.origins = State.origins.filter(d => d.id !== id);
+            State.saveToStorage('speaker_app_origins', State.origins);
+        }
+
+        State.destinations = State.destinations.filter(d => d.id !== id);
+        State.saveToStorage('speaker_app_destinations', State.destinations);
 
         this.renderList(document.querySelector('.masters-view'));
 
         window.showUndo('Eliminado', () => {
-            State.saveMaster(this.currentTab, backup);
+            if (wasOrigin) {
+                State.origins.push(backup);
+                State.saveToStorage('speaker_app_origins', State.origins);
+            } else {
+                State.destinations.push(backup);
+                State.saveToStorage('speaker_app_destinations', State.destinations);
+            }
             this.renderList(document.querySelector('.masters-view'));
         });
     },
@@ -327,7 +350,7 @@ export const Masters = {
     clearForm() {
         if (confirm('¿Estás seguro de limpiar todo el formulario?')) {
             document.getElementById('master-form').reset();
-            localStorage.removeItem(`draft_master_${this.currentTab}`);
+            localStorage.removeItem('draft_master');
         }
     },
 
@@ -357,21 +380,18 @@ export const Masters = {
                     const name = row[0].trim();
                     if (!name) continue;
 
-                    const list = this.currentTab === 'destinations' ? State.destinations : State.origins;
-                    // Check if already exists
-                    if (list.find(i => i.name.toLowerCase() === name.toLowerCase())) continue;
+                    // Unified check for existence
+                    const exists = [...State.destinations, ...State.origins].find(i => i.name.toLowerCase() === name.toLowerCase());
+                    if (exists) continue;
 
                     let contact_name = '';
                     let contact_phone = '';
                     let address = '';
 
-                    if (this.currentTab === 'destinations' && row.length >= 3) {
-                        // Expected: Congregación | Contacto Congregación | Domicilio ...
+                    // Try to be smart about the format (Congregación | Contacto | Dirección)
+                    if (row.length >= 3) {
                         const rawContact = row[1];
                         address = row[2];
-
-                        // Contact usually comes as "Name \n Phone" or "Name Phone"
-                        // Try to extract phone number by searching for digits
                         const phoneMatch = rawContact.match(/(\+?\d[\d\s-]{7,}\d)/);
                         if (phoneMatch) {
                             contact_phone = PhoneUtils.validate(phoneMatch[1].trim());
@@ -380,23 +400,16 @@ export const Masters = {
                             contact_name = rawContact.trim();
                         }
                     } else {
-                        // Expected: Congregación | No. Telefónico
                         contact_phone = PhoneUtils.validate(row[1] ? row[1].trim() : '');
                     }
 
                     const data = {
                         id: crypto.randomUUID(),
-                        name,
-                        address,
-                        contact_name,
-                        contact_phone,
-                        contact_email: '',
-                        contact2_name: '',
-                        contact2_phone: '',
-                        contact2_email: ''
+                        name, address, contact_name, contact_phone,
+                        contact_email: '', contact2_name: '', contact2_phone: '', contact2_email: ''
                     };
 
-                    State.saveMaster(this.currentTab, data, false); // Disable trigger if bulk, but safe to use
+                    State.saveMaster('destinations', data, false);
                     parsedCount++;
                 }
 

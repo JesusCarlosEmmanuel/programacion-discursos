@@ -51,6 +51,9 @@ export const Reports = {
                 <button class="btn btn-secondary" id="btn-share-img">
                     <i data-lucide="image"></i> Imagen
                 </button>
+                <button class="btn btn-secondary" id="btn-share-pdf">
+                    <i data-lucide="file-text"></i> PDF
+                </button>
             </div>
         `;
 
@@ -66,6 +69,7 @@ export const Reports = {
 
         container.querySelector('#btn-filter').addEventListener('click', () => this.generateReport(container));
         container.querySelector('#btn-share-img').addEventListener('click', () => this.shareAsImage());
+        container.querySelector('#btn-share-pdf').addEventListener('click', () => this.shareAsPDF());
         container.querySelector('#btn-share-wa').addEventListener('click', () => {
             if (!this.lastEvents) return window.showToast('Generando reporte primero', 'warning');
             const typeFilter = container.querySelector('#filter-type').value;
@@ -175,6 +179,37 @@ export const Reports = {
         } catch (err) {
             console.error(err);
             window.showToast('Error al generar imagen', 'danger');
+        }
+    },
+
+    async shareAsPDF() {
+        const element = document.getElementById('report-landscape');
+        window.showToast('Generando PDF...', 'info');
+
+        try {
+            const canvas = await html2canvas(element, {
+                backgroundColor: '#0f172a',
+                scale: 2,
+                logging: false,
+                useCORS: true
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+
+            // PDF size based on landscape aspect ratio
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+            });
+
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.save(`Programacion_Discursos_${new Date().toISOString().split('T')[0]}.pdf`);
+            window.showToast('PDF descargado', 'success');
+        } catch (error) {
+            console.error('Error al generar PDF:', error);
+            window.showToast('Error al generar PDF', 'danger');
         }
     }
 };
