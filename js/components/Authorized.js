@@ -323,7 +323,7 @@ export const Authorized = {
                         isFirstRow = false;
                         continue;
                     }
-                    if (row.length < 4) continue; // Need at least Name, Phone, Outline, Title
+                    if (row.length < 5) continue; // Need at least Nombre, Teléfono, Discurso, Título, Canción
 
                     const name = row[0].trim();
                     const phone = PhoneUtils.validate(row[1].trim() || '');

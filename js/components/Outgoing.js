@@ -333,14 +333,17 @@ export const Outgoing = {
                 let isFirstRow = true;
 
                 for (const row of rows) {
-                    // Cols: Congregación | Contacto Congregación | Domicilio | Nombre discursante | No. Bosquejo | Título | Fecha | Horario | Comentarios
+                    // Based on the second image (Van/Outgoing): 
+                    // Congregación | Contacto Congregación | Domicilio | Nombre discursante | No. Bosquejo | Título | Fecha | Horario | Comentarios
                     if (isFirstRow && row[0].toLowerCase().includes('congregaci')) { isFirstRow = false; continue; }
                     if (row.length < 7) continue;
 
                     const congregation = row[0].trim();
-                    const speakerName = row[3].trim();
-                    const outline = row[4].trim();
-                    const title = row[5].trim();
+                    // const contact = row[1]; // We don't save contact here, we extract it in Masters.js
+                    // const address = row[2];
+                    const speakerName = row[3] ? row[3].trim() : '';
+                    const outline = row[4] ? row[4].trim() : '';
+                    const title = row[5] ? row[5].trim() : '';
                     const rawDate = row[6] || '';
                     const rawTime = row[7] || '';
                     const comments = row[8] || '';

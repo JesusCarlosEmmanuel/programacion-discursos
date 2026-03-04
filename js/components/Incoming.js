@@ -320,10 +320,16 @@ export const Incoming = {
                     if (row.length < 5) continue;
 
                     const congregation = row[0].trim();
-                    const phone = PhoneUtils.validate(row[1].trim());
+                    const phone = PhoneUtils.validate(row[1] ? row[1].trim() : '');
                     const speakerName = row[2].trim();
-                    const song = row[3].trim();
-                    const titleRaw = row[4].trim();
+                    const song = row[3] ? row[3].trim() : '';
+                    let outline = '';
+                    let title = '';
+
+                    // In the image, Título format seems to have the outline sometimes or just Title.
+                    // But wait, the image for Incoming (3rd image) has "Título" column which contains "189 Andar con Dios..."
+                    // So we must extract outline from title column (row 4)
+                    const titleRaw = row[4] ? row[4].trim() : '';
                     const rawDate = row[5] || '';
                     const rawTime = row[6] || '';
                     const comments = row[7] || '';
@@ -331,12 +337,12 @@ export const Incoming = {
                     if (!speakerName || !titleRaw || !rawDate) continue;
 
                     // Extract outline from title (e.g., "189 Andar con Dios...")
-                    let outline = '';
-                    let title = titleRaw;
                     const numMatch = titleRaw.match(/^(\d+)[-\s]+(.*)/);
                     if (numMatch) {
                         outline = numMatch[1];
                         title = numMatch[2].trim();
+                    } else {
+                        title = titleRaw;
                     }
 
                     const formattedDate = this.parseSpanishDate(rawDate);

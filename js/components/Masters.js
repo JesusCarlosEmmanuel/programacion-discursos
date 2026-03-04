@@ -258,17 +258,18 @@ export const Masters = {
                         const rawContact = row[1];
                         address = row[2];
 
-                        // Split contact "Nombre \n Telefono"
-                        const match = rawContact.match(/([a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+)[\\n\\r]*(.*)/);
-                        if (match) {
-                            contact_name = match[1].trim();
-                            contact_phone = PhoneUtils.validate(match[2].trim());
+                        // Contact usually comes as "Name \n Phone" or "Name Phone"
+                        // Try to extract phone number by searching for digits
+                        const phoneMatch = rawContact.match(/(\+?\d[\d\s-]{7,}\d)/);
+                        if (phoneMatch) {
+                            contact_phone = PhoneUtils.validate(phoneMatch[1].trim());
+                            contact_name = rawContact.replace(phoneMatch[1], '').trim().replace(/[\n\r]+$/, '').trim();
                         } else {
-                            contact_name = rawContact;
+                            contact_name = rawContact.trim();
                         }
                     } else {
                         // Expected: Congregación | No. Telefónico
-                        contact_phone = PhoneUtils.validate(row[1].trim());
+                        contact_phone = PhoneUtils.validate(row[1] ? row[1].trim() : '');
                     }
 
                     const data = {
