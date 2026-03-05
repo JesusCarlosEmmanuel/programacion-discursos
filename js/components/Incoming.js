@@ -19,7 +19,10 @@ export const Incoming = {
                 </button>
             </div>
             <div class="view-header" style="flex-wrap: wrap; gap: 0.5rem">
-                <h2>Discursantes que Vienen</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="select-all-incoming" title="Seleccionar todos">
+                    <h2>Discursantes que Vienen</h2>
+                </div>
                 <div style="display: flex; gap: 0.5rem; flex: 1; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
                     <label class="btn btn-secondary btn-small" style="cursor: pointer; margin: 0">
                         <i data-lucide="upload"></i> Importar CSV
@@ -45,6 +48,12 @@ export const Incoming = {
         container.querySelector('#btn-add-event').addEventListener('click', () => this.showModal());
         const importInput = container.querySelector('#incoming-import-csv');
         if (importInput) importInput.addEventListener('change', (e) => this.handleImportCSV(e));
+
+        const selectAll = container.querySelector('#select-all-incoming');
+        if (selectAll) {
+            selectAll.addEventListener('change', (e) => this.toggleAll(e.target.checked));
+        }
+
         if (window.lucide) window.lucide.createIcons();
     },
 
@@ -115,10 +124,23 @@ export const Incoming = {
         } else {
             bar.classList.add('hidden');
         }
+
+        // Update Select All checkbox state
+        const selectAll = document.getElementById('select-all-incoming');
+        if (selectAll) selectAll.checked = this.selectedIds.size === State.incoming.length && State.incoming.length > 0;
+    },
+
+    toggleAll(checked) {
+        if (checked) {
+            State.incoming.forEach(e => this.selectedIds.add(e.id));
+        } else {
+            this.selectedIds.clear();
+        }
+        this.renderList(document.querySelector('.event-list'), State.incoming);
     },
 
     handleBulkDelete() {
-        if (!confirm(`¿Eliminar ${this.selectedIds.size} visitas?`)) return;
+        if (!confirm(`¿Estás seguro de que deseas eliminar las ${this.selectedIds.size} visitas seleccionadas?`)) return;
         const idsToDelete = Array.from(this.selectedIds);
         this.executeDelete(idsToDelete);
         this.selectedIds.clear();

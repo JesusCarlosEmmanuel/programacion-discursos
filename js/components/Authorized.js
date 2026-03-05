@@ -18,7 +18,10 @@ export const Authorized = {
                 </button>
             </div>
             <div class="view-header" style="flex-wrap: wrap; gap: 0.5rem">
-                <h2>Discursantes Autorizados</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="select-all-speakers" title="Seleccionar todos">
+                    <h2>Discursantes Autorizados</h2>
+                </div>
                 <div style="display: flex; gap: 0.5rem; flex: 1; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
                     <div class="search-box">
                         <i data-lucide="search"></i>
@@ -58,6 +61,11 @@ export const Authorized = {
             const filtered = State.authorized.filter(s => s.name.toLowerCase().includes(query));
             this.renderList(container.querySelector('.speaker-list'), filtered);
         });
+
+        const selectAll = container.querySelector('#select-all-speakers');
+        if (selectAll) {
+            selectAll.addEventListener('change', (e) => this.toggleAll(e.target.checked));
+        }
 
         const importInput = container.querySelector('#authorized-import-csv');
         if (importInput) {
@@ -182,10 +190,23 @@ export const Authorized = {
         } else {
             bar.classList.add('hidden');
         }
+
+        // Update Select All checkbox state
+        const selectAll = document.getElementById('select-all-speakers');
+        if (selectAll) selectAll.checked = this.selectedIds.size === State.authorized.length && State.authorized.length > 0;
+    },
+
+    toggleAll(checked) {
+        if (checked) {
+            State.authorized.forEach(s => this.selectedIds.add(s.id));
+        } else {
+            this.selectedIds.clear();
+        }
+        this.renderList(document.querySelector('.speaker-list'), State.authorized);
     },
 
     handleBulkDelete() {
-        if (!confirm(`¿Eliminar ${this.selectedIds.size} discursantes?`)) return;
+        if (!confirm(`¿Estás seguro de que deseas eliminar los ${this.selectedIds.size} discursantes seleccionados?`)) return;
 
         const idsToDelete = Array.from(this.selectedIds);
         this.executeDelete(idsToDelete);

@@ -3,14 +3,24 @@ import { PhoneUtils } from '../utils/phone.js';
 import { CSVUtils } from '../utils/csv.js';
 
 export const Masters = {
+    selectedIds: new Set(),
 
     render() {
         const container = document.createElement('div');
         container.className = 'masters-view';
 
         container.innerHTML = `
+            <div id="selection-bar" class="selection-bar hidden">
+                <span id="selection-count">0 seleccionados</span>
+                <button class="btn btn-danger btn-small" onclick="Masters.handleBulkDelete()">
+                    <i data-lucide="trash-2"></i> Borrar
+                </button>
+            </div>
             <div class="view-header" style="flex-wrap: wrap; gap: 0.5rem">
-                <h2>Directorio de Congregaciones</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="select-all-masters" title="Seleccionar todos">
+                    <h2>Directorio de Congregaciones</h2>
+                </div>
                 <div style="display: flex; gap: 0.5rem; flex: 1; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
                     <label class="btn btn-secondary btn-small" style="cursor: pointer; margin: 0">
                         <i data-lucide="upload"></i> Importar CSV
@@ -43,6 +53,11 @@ export const Masters = {
         const importInput = container.querySelector('#masters-import-csv');
         if (importInput) importInput.addEventListener('change', (e) => this.handleImportCSV(e));
 
+        const selectAll = container.querySelector('#select-all-masters');
+        if (selectAll) {
+            selectAll.addEventListener('change', (e) => this.toggleAll(e.target.checked));
+        }
+
         if (window.lucide) window.lucide.createIcons();
     },
 
@@ -67,8 +82,13 @@ export const Masters = {
                 </div>
             `;
         } else {
-            content.innerHTML = list.map(item => `
-                <div class="card master-card" data-id="${item.id}">
+            content.innerHTML = list.map(item => {
+                const isSelected = this.selectedIds.has(item.id);
+                return `
+                <div class="card master-card ${isSelected ? 'selected' : ''}" data-id="${item.id}">
+                    <div class="card-selection">
+                        <input type="checkbox" class="bulk-check" data-id="${item.id}" onchange="Masters.toggleSelection('${item.id}')" ${isSelected ? 'checked' : ''}>
+                    </div>
                     <div class="master-info" onclick="Masters.showMasterModal('${item.id}')">
                         <div class="master-card-header">
                             <strong>${item.name}</strong>
@@ -114,10 +134,77 @@ export const Masters = {
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         if (window.lucide) window.lucide.createIcons();
+        this.updateSelectionBar();
+    },
+
+    toggleSelection(id) {
+        if (this.selectedIds.has(id)) {
+            this.selectedIds.delete(id);
+        } else {
+            this.selectedIds.add(id);
+        }
+        this.updateSelectionBar();
+        const card = document.querySelector(`.master-card[data-id="${id}"]`);
+        if (card) card.classList.toggle('selected');
+
+        // Update Select All checkbox state
+        const combinedCount = State.destinations.length + State.origins.filter(o => !State.destinations.find(c => c.id === o.id)).length;
+        const selectAll = document.getElementById('select-all-masters');
+        if (selectAll) selectAll.checked = this.selectedIds.size === combinedCount && combinedCount > 0;
+    },
+
+    toggleAll(checked) {
+        if (checked) {
+            const combined = [...State.destinations];
+            State.origins.forEach(o => {
+                if (!combined.find(c => c.id === o.id)) combined.push(o);
+            });
+            combined.forEach(item => this.selectedIds.add(item.id));
+        } else {
+            this.selectedIds.clear();
+        }
+        this.renderList(document.querySelector('.masters-view'));
+    },
+
+    updateSelectionBar() {
+        const bar = document.getElementById('selection-bar');
+        const count = document.getElementById('selection-count');
+        if (!bar || !count) return;
+
+        if (this.selectedIds.size > 0) {
+            bar.classList.remove('hidden');
+            count.innerText = `${this.selectedIds.size} seleccionados`;
+        } else {
+            bar.classList.add('hidden');
+        }
+    },
+
+    handleBulkDelete() {
+        if (!confirm(`¿Estás seguro de que deseas eliminar ${this.selectedIds.size} congregaciones seleccionadas?`)) return;
+        const idsToDelete = Array.from(this.selectedIds);
+        this.executeBulkDelete(idsToDelete);
+        this.selectedIds.clear();
+        const selectAll = document.getElementById('select-all-masters');
+        if (selectAll) selectAll.checked = false;
+    },
+
+    executeBulkDelete(ids) {
+        ids.forEach(id => {
+            const wasOrigin = State.origins.some(o => o.id === id);
+            if (wasOrigin) {
+                State.origins = State.origins.filter(d => d.id !== id);
+                State.saveToStorage('speaker_app_origins', State.origins);
+            }
+            State.destinations = State.destinations.filter(d => d.id !== id);
+            State.saveToStorage('speaker_app_destinations', State.destinations);
+        });
+        this.renderList(document.querySelector('.masters-view'));
+        window.showToast('Registros eliminados', 'success');
     },
 
     showMasterModal(id = null) {

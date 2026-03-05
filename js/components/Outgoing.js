@@ -18,7 +18,10 @@ export const Outgoing = {
                 </button>
             </div>
             <div class="view-header" style="flex-wrap: wrap; gap: 0.5rem">
-                <h2>Discursantes que Van</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="select-all-outgoing" title="Seleccionar todos">
+                    <h2>Discursantes que Van</h2>
+                </div>
                 <div style="display: flex; gap: 0.5rem; flex: 1; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
                     <label class="btn btn-secondary btn-small" style="cursor: pointer; margin: 0">
                         <i data-lucide="upload"></i> Importar CSV
@@ -44,6 +47,12 @@ export const Outgoing = {
         container.querySelector('#btn-add-event').addEventListener('click', () => this.showModal());
         const importInput = container.querySelector('#outgoing-import-csv');
         if (importInput) importInput.addEventListener('change', (e) => this.handleImportCSV(e));
+
+        const selectAll = container.querySelector('#select-all-outgoing');
+        if (selectAll) {
+            selectAll.addEventListener('change', (e) => this.toggleAll(e.target.checked));
+        }
+
         if (window.lucide) window.lucide.createIcons();
     },
 
