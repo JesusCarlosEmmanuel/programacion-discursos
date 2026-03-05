@@ -585,8 +585,8 @@ export const Outgoing = {
 
                     const formattedTime = this.parseTime(rawTime);
 
-                    // Add to masters if new and has info
-                    if (congregation && (contactRaw || address)) {
+                    // Add to masters if new
+                    if (congregation) {
                         const exists = State.destinations.find(d => d.name.toLowerCase() === congregation.toLowerCase());
                         if (!exists) {
                             const phoneMatch = contactRaw.match(/(\+?\d[\d\s-]{7,}\d)/);

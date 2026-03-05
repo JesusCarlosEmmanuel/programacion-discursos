@@ -595,6 +595,23 @@ export const Incoming = {
 
                     const formattedTime = this.parseTime(rawTime);
 
+                    // Auto-detect and add new foreign congregation (Origin)
+                    if (congregation) {
+                        const exists = State.origins.find(o => o.name.toLowerCase() === congregation.toLowerCase());
+                        if (!exists) {
+                            State.origins.push({
+                                id: crypto.randomUUID(),
+                                name: congregation,
+                                contact_name: 'Coordinador',
+                                contact_phone: phone, // Use speaker phone as a starting point if no other info
+                                address: '',
+                                meeting_day: '',
+                                meeting_time: formattedTime
+                            });
+                            State.saveToStorage('speaker_app_origins', State.origins);
+                        }
+                    }
+
                     const data = {
                         id: crypto.randomUUID(),
                         speaker_name: speakerName,
