@@ -29,11 +29,18 @@
             style="padding: 20px; background: #ef4444; color: white; border-radius: 10px; margin: 20px; font-size: 0.9rem;">
             <h3>⚠️ Error de Carga / Botones no funcionan</h3>
             <p>Parece que la aplicación tiene problemas para cargar o hay datos corruptos.</p>
-            <button onclick="window.hardReset()"
-                style="background: white; color: #ef4444; border:none; padding:10px; border-radius:5px; margin: 10px 0; font-weight: bold; cursor:pointer">
-                LIMPIEZA TOTAL Y REINICIO
-            </button>
-            <p style="font-size: 0.8rem">Usa este botón si los botones no reaccionan o ves mucha información basura.</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0;">
+                <button onclick="window.cleanCache()"
+                    style="background: white; color: #6366f1; border:none; padding:10px; border-radius:5px; font-weight: bold; cursor:pointer">
+                    LIMPIAR CACHÉ (SEGURO)
+                </button>
+                <button onclick="window.hardReset()"
+                    style="background: #991b1b; color: white; border:none; padding:10px; border-radius:5px; font-weight: bold; cursor:pointer">
+                    Vaciado Total (Restablecer Fábrica)
+                </button>
+            </div>
+            <p style="font-size: 0.8rem">"Limpiar Caché" mantiene tus datos. "Vaciado Total" borra todo permanentemente.
+            </p>
         </div>
 
         <!-- Dashboard Header -->

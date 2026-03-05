@@ -406,7 +406,10 @@ export const Outgoing = {
     parseSpanishDate(dateStr) {
         if (!dateStr) return '';
         const months = { 'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04', 'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08', 'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12' };
-        const str = dateStr.toLowerCase();
+
+        // Remove day name (domingo, lunes...) and clean string
+        let str = dateStr.toLowerCase().replace(/^[a-z]+,\s*/, '').trim();
+
         for (const [monthName, monthNum] of Object.entries(months)) {
             if (str.includes(monthName)) {
                 const match = str.match(/(\d{1,2})\s+de\s+[a-z]+\s+de\s+(\d{4})/);
@@ -432,6 +435,9 @@ export const Outgoing = {
             if (ampm === 'am' && h === 12) h = 0;
             return `${h.toString().padStart(2, '0')}:${m}`;
         }
+        // Handle 24h format HH:MM
+        let hm = timeStr.match(/(\d{1,2}):(\d{2})/);
+        if (hm) return `${hm[1].padStart(2, '0')}:${hm[2]}`;
         return '10:00';
     },
 
@@ -450,14 +456,13 @@ export const Outgoing = {
                 let isFirstRow = true;
 
                 for (const row of rows) {
-                    // Based on the second image (Van/Outgoing): 
-                    // Congregación | Contacto Congregación | Domicilio | Nombre discursante | No. Bosquejo | Título | Fecha | Horario | Comentarios
+                    // Cols: Congregación | Contacto | Domicilio | Nombre discursante | No. Bosquejo | Título | Fecha | Horario | Comentarios
                     if (isFirstRow && row[0].toLowerCase().includes('congregaci')) { isFirstRow = false; continue; }
                     if (row.length < 7) continue;
 
                     const congregation = row[0].trim();
-                    // const contact = row[1]; // We don't save contact here, we extract it in Masters.js
-                    // const address = row[2];
+                    const contactRaw = row[1] ? row[1].trim() : '';
+                    const address = row[2] ? row[2].trim() : '';
                     const speakerName = row[3] ? row[3].trim() : '';
                     const outline = row[4] ? row[4].trim() : '';
                     const title = row[5] ? row[5].trim() : '';
@@ -472,6 +477,25 @@ export const Outgoing = {
 
                     const formattedTime = this.parseTime(rawTime);
 
+                    // Add to masters if new and has info
+                    if (congregation && (contactRaw || address)) {
+                        const exists = State.destinations.find(d => d.name.toLowerCase() === congregation.toLowerCase());
+                        if (!exists) {
+                            const phoneMatch = contactRaw.match(/(\+?\d[\d\s-]{7,}\d)/);
+                            const phone = phoneMatch ? PhoneUtils.validate(phoneMatch[1]) : '';
+                            const name = contactRaw.replace(phoneMatch ? phoneMatch[1] : '', '').trim();
+                            State.destinations.push({
+                                id: crypto.randomUUID(),
+                                name: congregation,
+                                address: address,
+                                contact_name: name || 'Coordinador',
+                                contact_phone: phone,
+                                meeting_day: '', meeting_time: formattedTime
+                            });
+                            State.saveToStorage('speaker_app_destinations', State.destinations);
+                        }
+                    }
+
                     // Find or create speaker
                     let speaker = State.authorized.find(s => s.name.toLowerCase() === speakerName.toLowerCase());
                     if (!speaker) {
@@ -480,14 +504,14 @@ export const Outgoing = {
                             name: speakerName,
                             phone: '',
                             contact_secondary: '',
-                            comments: 'Auto-importado desde Van',
+                            comments: 'Auto-importado',
                             talks: []
                         };
                         State.authorized.push(speaker);
                         State.saveToStorage('speaker_app_authorized', State.authorized);
                     }
 
-                    // Add talk if missing in speaker's profile
+                    // Add talk if missing
                     if (!speaker.talks.find(t => t.outline == outline) && outline) {
                         speaker.talks.push({ outline, title, song: '' });
                         State.saveToStorage('speaker_app_authorized', State.authorized);
@@ -499,7 +523,7 @@ export const Outgoing = {
                         destination_congregation: congregation,
                         outline_number: outline,
                         talk_title: title,
-                        song_number: '', // No song column in their picture for Outgoing
+                        song_number: '',
                         date: formattedDate,
                         time: formattedTime,
                         comments: comments

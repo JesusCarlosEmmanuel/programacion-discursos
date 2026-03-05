@@ -149,15 +149,40 @@ if (document.readyState === 'loading') {
     new Router();
 }
 
-// Emergency function to clear cache and state
+// Safe function to clear only cache and service worker
+window.cleanCache = () => {
+    if (confirm('¿Limpiar archivos temporales y reiniciar? Tus datos (discursantes y agendas) NO se borrarán.')) {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+        // Clear Cache API shells
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                for (let name of names) caches.delete(name);
+            });
+        }
+        window.location.reload(true);
+    }
+};
+
+// Emergency function to clear EVERYTHING
 window.hardReset = () => {
-    if (confirm('¿BORRAR TODO? Esto eliminará todos los datos y reiniciará la app.')) {
+    if (confirm('⚠️ ¡ADVERTENCIA CRÍTICA! ⚠️\n\n¿Estás SEGURO de que deseas RESTABLECER DE FÁBRICA?\n\nEsto BORRARÁ PERMANENTEMENTE todos tus discursantes, congregaciones y toda la programación agendada. No se puede deshacer.')) {
         localStorage.clear();
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(registrations => {
                 for (let registration of registrations) {
                     registration.unregister();
                 }
+            });
+        }
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                for (let name of names) caches.delete(name);
             });
         }
         window.location.reload(true);
