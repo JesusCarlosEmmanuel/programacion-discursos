@@ -65,9 +65,15 @@ export const Authorized = {
         }
 
         container.querySelector('#btn-share-catalog').addEventListener('click', () => {
-            import('../services/NotificationService.js').then(({ NotificationService }) => {
-                NotificationService.shareSpeakerCatalog(State.authorized);
-            });
+            import('../services/NotificationService.js')
+                .then(module => {
+                    const ns = module.NotificationService || window.NotificationService;
+                    ns.shareSpeakerCatalog(State.authorized);
+                })
+                .catch(err => {
+                    console.error('Error sharing catalog:', err);
+                    window.showToast('Error al abrir WhatsApp', 'danger');
+                });
         });
 
         container.querySelector('#btn-share-availability').addEventListener('click', () => {
@@ -76,9 +82,15 @@ export const Authorized = {
             const month = prompt('Ingrese el mes a consultar (YYYY-MM):', currentMonth);
             if (!month) return;
 
-            import('../services/NotificationService.js').then(({ NotificationService }) => {
-                NotificationService.shareSpeakerAvailability(month);
-            });
+            import('../services/NotificationService.js')
+                .then(module => {
+                    const ns = module.NotificationService || window.NotificationService;
+                    ns.shareSpeakerAvailability(month);
+                })
+                .catch(err => {
+                    console.error('Error sharing availability:', err);
+                    window.showToast('Error al abrir WhatsApp', 'danger');
+                });
         });
 
         if (window.lucide) window.lucide.createIcons();
