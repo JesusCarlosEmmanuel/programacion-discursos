@@ -207,7 +207,6 @@ export const NotificationService = {
     },
 
     shareSpeakerAvailability(month) {
-        // month is "YYYY-MM"
         const speakers = State.authorized;
         if (!speakers || speakers.length === 0) {
             window.showToast('No hay discursantes registrados', 'warning');
@@ -217,43 +216,52 @@ export const NotificationService = {
         const date = new Date(month + '-01T12:00:00');
         const monthName = date.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
 
-        let message = `*DISPONIBILIDAD DE DISCURSANTES (${monthName.toUpperCase()})*\n\n`;
+        let message = `*DISPONIBILIDAD PARA COORDINACIÓN (${monthName.toUpperCase()})*\n`;
+        message += `_Los siguientes hermanos tienen fechas disponibles este mes:_\n\n`;
 
         // Find all weekends in the month
         const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
         const weekends = [];
         for (let d = 1; d <= daysInMonth; d++) {
             const cur = new Date(date.getFullYear(), date.getMonth(), d);
-            if (cur.getDay() === 0 || cur.getDay() === 6) { // Sat or Sun
+            if (cur.getDay() === 0 || cur.getDay() === 6) {
                 const dateStr = cur.toISOString().split('T')[0];
                 if (!weekends.includes(dateStr)) weekends.push(dateStr);
             }
         }
 
         const sortedSpeakers = [...speakers].sort((a, b) => a.name.localeCompare(b.name));
+        let availableCount = 0;
 
         sortedSpeakers.forEach(s => {
-            // Find assignments for this speaker in this month
             const assignments = State.outgoing.filter(e => e.speaker_id === s.id && e.date.startsWith(month));
+            const availableDates = weekends
+                .filter(w => !assignments.some(a => a.date === w))
+                .map(w => w.split('-')[2]);
 
-            message += `👤 *${s.name.toUpperCase()}*\n`;
-            if (assignments.length > 0) {
-                const assignedDates = assignments.map(a => a.date.split('-')[2]);
-                message += `📅 Ocupado: ${assignedDates.join(', ')}\n`;
+            if (availableDates.length > 0) {
+                availableCount++;
+                message += `👤 *${s.name.toUpperCase()}*\n`;
+                message += `✅ Disponible: ${availableDates.join(', ')}\n`;
 
-                // Show remaining weekends if they only have one assignment (since limit is 1)
-                const available = weekends
-                    .filter(w => !assignments.some(a => a.date === w))
-                    .map(w => w.split('-')[2]);
-
-                if (available.length > 0) {
-                    message += `✅ Disponible: ${available.join(', ')}\n`;
+                if (s.talks && s.talks.length > 0) {
+                    message += `*Temas:*\n`;
+                    s.talks.forEach(t => {
+                        message += `• #${t.outline} ${t.title}\n`;
+                    });
+                } else {
+                    message += `(Sin temas registrados)\n`;
                 }
-            } else {
-                message += `✅ Disponible todo el mes\n`;
+                message += `\n`;
             }
-            message += `\n`;
         });
+
+        if (availableCount === 0) {
+            window.showToast('No hay discursantes con disponibilidad en este mes', 'warning');
+            return;
+        }
+
+        message += `_Enviado desde Programación Discursantes_`;
 
         const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
