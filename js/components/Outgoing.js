@@ -563,19 +563,20 @@ export const Outgoing = {
                 let isFirstRow = true;
 
                 for (const row of rows) {
-                    // Cols: Congregación | Contacto | Domicilio | Nombre discursante | No. Bosquejo | Título | Fecha | Horario | Comentarios
+                    // Cols: A:Congregación | B:Contacto | C:Domicilio | D:Nombre | E:No.Tel | F:Bosquejo | G:Título | H:Fecha | I:Horario | J:Comentarios
                     if (isFirstRow && row[0].toLowerCase().includes('congregaci')) { isFirstRow = false; continue; }
-                    if (row.length < 7) continue;
+                    if (row.length < 8) continue;
 
                     const congregation = row[0].trim();
                     const contactRaw = row[1] ? row[1].trim() : '';
                     const address = row[2] ? row[2].trim() : '';
                     const speakerName = row[3] ? row[3].trim() : '';
-                    const outline = row[4] ? row[4].trim() : '';
-                    const title = row[5] ? row[5].trim() : '';
-                    const rawDate = row[6] || '';
-                    const rawTime = row[7] || '';
-                    const comments = row[8] || '';
+                    const speakerPhone = row[4] ? row[4].trim() : '';
+                    const outline = row[5] ? row[5].trim() : '';
+                    const title = row[6] ? row[6].trim() : '';
+                    const rawDate = row[7] || '';
+                    const rawTime = row[8] || '';
+                    const comments = row[9] || '';
 
                     if (!speakerName || !title || !rawDate) continue;
 
@@ -609,7 +610,7 @@ export const Outgoing = {
                         speaker = {
                             id: crypto.randomUUID(),
                             name: speakerName,
-                            phone: '',
+                            phone: PhoneUtils.validate(speakerPhone),
                             contact_secondary: '',
                             comments: 'Auto-importado',
                             talks: []
