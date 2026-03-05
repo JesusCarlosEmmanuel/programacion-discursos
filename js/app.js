@@ -120,7 +120,7 @@ window.showUndo = (msg, callback) => {
     `;
     if (window.lucide) window.lucide.createIcons();
 
-    let timeLeft = 4;
+    let timeLeft = 5;
     const timer = setInterval(() => {
         timeLeft--;
         const timerEl = document.getElementById('undo-timer');

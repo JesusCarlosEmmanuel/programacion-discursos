@@ -261,6 +261,30 @@ export const Authorized = {
                             <input type="tel" id="speaker-phone" value="${speaker.phone}" required placeholder="521...">
                         </div>
                     </div>
+                    
+                    ${id ? `
+                    <div class="upcoming-speeches-section" style="margin-top: 1rem; margin-bottom: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 5px; color: #6366f1; font-weight: 600;">
+                            <i data-lucide="calendar"></i> Próximas Salidas (Programadas)
+                        </label>
+                        <div style="background: rgba(99, 102, 241, 0.05); border-radius: 8px; padding: 10px; margin-top: 5px; border: 1px solid rgba(99, 102, 241, 0.1);">
+                            ${(() => {
+                    const upcoming = State.outgoing
+                        .filter(e => e.speaker_id === id && new Date(e.date) >= new Date(new Date().setHours(0, 0, 0, 0)))
+                        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    if (upcoming.length === 0) return '<p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">Sin salidas próximas programadas.</p>';
+
+                    return upcoming.map(u => `
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        <strong>${u.date}</strong>
+                                        <span style="color: #94a3b8;">${u.destination_congregation}</span>
+                                    </div>
+                                `).join('');
+                })()}
+                        </div>
+                    </div>
+                    ` : ''}
                     <div class="form-group">
                         <label>Contacto Secundario (Email/Referencia)</label>
                         <input type="text" id="speaker-secondary" value="${speaker.contact_secondary || ''}" placeholder="Opcional">
