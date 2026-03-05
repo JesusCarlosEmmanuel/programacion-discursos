@@ -44,9 +44,19 @@ export const DataManagement = {
                             <input type="tel" id="cong-sched-phone" placeholder="WhatsApp">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Horario Reunión Fin de Semana</label>
-                        <input type="text" id="cong-time" placeholder="Ej: Domingo 10:00 am">
+                    <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+                        <div class="form-group">
+                            <label>Día Reunión FDS</label>
+                            <select id="cong-day">
+                                <option value="">Seleccionar día</option>
+                                <option value="Sábado">Sábado</option>
+                                <option value="Domingo">Domingo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Horario</label>
+                            <input type="time" id="cong-time">
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:100%">
                         <i data-lucide="save"></i> Guardar Perfil
@@ -161,6 +171,7 @@ export const DataManagement = {
             profForm.querySelector('#cong-coord-phone').value = prof.coordinator?.phone || '';
             profForm.querySelector('#cong-sched-name').value = prof.scheduler?.name || '';
             profForm.querySelector('#cong-sched-phone').value = prof.scheduler?.phone || '';
+            profForm.querySelector('#cong-day').value = prof.meetingDay || '';
             profForm.querySelector('#cong-time').value = prof.meetingTime || '';
         }
 
@@ -177,6 +188,7 @@ export const DataManagement = {
                     name: profForm.querySelector('#cong-sched-name').value,
                     phone: PhoneUtils.validate(profForm.querySelector('#cong-sched-phone').value)
                 },
+                meetingDay: profForm.querySelector('#cong-day').value,
                 meetingTime: profForm.querySelector('#cong-time').value
             };
             State.updateCongregation(data);

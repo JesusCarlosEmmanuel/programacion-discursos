@@ -49,8 +49,23 @@ export const Dashboard = {
 `;
 
         NotificationService.checkAutomatedAlerts();
+        this.checkNewYear();
         if (window.lucide) window.lucide.createIcons();
         return container;
+    },
+
+    checkNewYear() {
+        const currentYear = new Date().getFullYear();
+        const lastYearChecked = localStorage.getItem('last_year_checked');
+        if (lastYearChecked && parseInt(lastYearChecked) < currentYear) {
+            // It's a new year
+            setTimeout(() => {
+                if (confirm(`¡Feliz ${currentYear}! Recuerda que al iniciar el año los horarios de las congregaciones pueden cambiar. ¿Deseas revisar y actualizar el horario de tu congregación ahora?`)) {
+                    window.router.navigate('data');
+                }
+            }, 2000);
+        }
+        localStorage.setItem('last_year_checked', currentYear.toString());
     },
 
     getStats() {
@@ -89,15 +104,17 @@ export const Dashboard = {
                 return eventDate >= today && eventDate <= tenDaysLater;
             });
 
-        // Gap alert logic (Free weekends: Sat & Sun)
+        // Gap alert logic (Only for the local meeting day)
         const gapAlerts = [];
         const thirtyDaysLater = new Date();
         thirtyDaysLater.setDate(now.getDate() + 30);
 
+        const localMeetingDay = State.congregation?.meetingDay || 'Domingo';
+        const targetDayNum = localMeetingDay === 'Sábado' ? 6 : 0;
+
         for (let d = new Date(now); d <= thirtyDaysLater; d.setDate(d.getDate() + 1)) {
             const dayOfWeek = d.getDay();
-            // Saturday = 6, Sunday = 0
-            if (dayOfWeek === 0 || dayOfWeek === 6) {
+            if (dayOfWeek === targetDayNum) {
                 const yyyy = d.getFullYear();
                 const mm = String(d.getMonth() + 1).padStart(2, '0');
                 const dd = String(d.getDate()).padStart(2, '0');
@@ -142,7 +159,7 @@ export const Dashboard = {
                             </span>
                         </div>
                         <h2 style="font-size: 1.6rem; font-weight: 900; letter-spacing: 1px; margin: 0.5rem 0;">FIN DE SEMANA LIBRE</h2>
-                        <p style="color:#ff7b7b; font-size: 1.1rem;">No hay discursante programado.</p>
+                        <p style="color:#ff7b7b; font-size: 1.1rem;">No hay discursante programado para el ${dayName.toLowerCase()} ${displayDate}.</p>
                     </div>
                     <div class="alert-actions">
                         <button class="btn btn-secondary" onclick="window.router.navigate('incoming')" style="border-radius: 12px; display: flex; align-items: center; gap: 8px; font-weight: 600; background: rgba(255,255,255,0.05);">
