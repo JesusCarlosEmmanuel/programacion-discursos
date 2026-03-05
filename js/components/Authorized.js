@@ -65,10 +65,17 @@ export const Authorized = {
         }
 
         container.querySelector('#btn-share-catalog').addEventListener('click', () => {
+            const today = new Date();
+            const currentMonth = today.toISOString().substring(0, 7);
+            const month = prompt('¿Deseas filtrar por disponibilidad en un mes?\nIngrese el mes (YYYY-MM) o deje vacío para catálogo completo:', '');
+
+            // If user cancels (null), don't do anything
+            if (month === null) return;
+
             import('../services/NotificationService.js')
                 .then(module => {
                     const ns = module.NotificationService || window.NotificationService;
-                    ns.shareSpeakerCatalog(State.authorized);
+                    ns.shareSpeakerCatalog(State.authorized, month.trim());
                 })
                 .catch(err => {
                     console.error('Error sharing catalog:', err);
