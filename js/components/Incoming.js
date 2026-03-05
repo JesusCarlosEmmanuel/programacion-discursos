@@ -6,8 +6,24 @@ import { CSVUtils } from '../utils/csv.js';
 export const Incoming = {
 
     selectedIds: new Set(),
+    filters: {
+        query: '',
+        congregation: '',
+        year: '',
+        month: '',
+        sort: 'desc'
+    },
 
-    render() {
+    render(params) {
+        // Reset or set filters based on params
+        if (params && params.get('filter') === 'recent') {
+            const sixtyDaysAgo = new Date();
+            sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+            this.filters.minDate = sixtyDaysAgo.toISOString().split('T')[0];
+        } else {
+            delete this.filters.minDate;
+        }
+
         const container = document.createElement('div');
         container.className = 'events-view';
 
@@ -34,6 +50,24 @@ export const Incoming = {
                 </div>
             </div>
 
+            <div class="filter-bar card" style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 0.75rem; margin-bottom: 1rem;">
+                <input type="text" id="filter-query" placeholder="Buscar por discurso o título..." style="flex: 2; min-width: 200px;" value="${this.filters.query}">
+                <input type="text" id="filter-cong" placeholder="Congregación..." style="flex: 1; min-width: 150px;" value="${this.filters.congregation}">
+                <select id="filter-month" style="flex: 0.8; min-width: 100px;">
+                    <option value="">Mes...</option>
+                    ${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => `<option value="${(i + 1).toString().padStart(2, '0')}" ${this.filters.month === (i + 1).toString().padStart(2, '0') ? 'selected' : ''}>${m}</option>`).join('')}
+                </select>
+                <select id="filter-year" style="flex: 0.8; min-width: 80px;">
+                    <option value="">Año...</option>
+                    ${[2024, 2025, 2026, 2027].map(y => `<option value="${y}" ${this.filters.year == y ? 'selected' : ''}>${y}</option>`).join('')}
+                </select>
+                <select id="filter-sort" style="flex: 0.8; min-width: 120px;">
+                    <option value="desc" ${this.filters.sort === 'desc' ? 'selected' : ''}>Nuevo a Viejo</option>
+                    <option value="asc" ${this.filters.sort === 'asc' ? 'selected' : ''}>Viejo a Nuevo</option>
+                </select>
+                <button class="btn btn-secondary btn-small" id="btn-clear-filters"><i data-lucide="rotate-ccw"></i></button>
+            </div>
+
             <div class="event-list">
                 <!-- Content will be injected -->
             </div>
@@ -54,47 +88,110 @@ export const Incoming = {
             selectAll.addEventListener('change', (e) => this.toggleAll(e.target.checked));
         }
 
+        // Filter events
+        const qInput = container.querySelector('#filter-query');
+        const cInput = container.querySelector('#filter-cong');
+        const mInput = container.querySelector('#filter-month');
+        const yInput = container.querySelector('#filter-year');
+        const sInput = container.querySelector('#filter-sort');
+        const clearBtn = container.querySelector('#btn-clear-filters');
+
+        const updateFilters = () => {
+            this.filters.query = qInput.value.toLowerCase();
+            this.filters.congregation = cInput.value.toLowerCase();
+            this.filters.month = mInput.value;
+            this.filters.year = yInput.value;
+            this.filters.sort = sInput.value;
+            this.renderList(container.querySelector('.event-list'), State.incoming);
+        };
+
+        [qInput, cInput, mInput, yInput, sInput].forEach(el => el.addEventListener('input', updateFilters));
+        clearBtn.addEventListener('click', () => {
+            qInput.value = ''; cInput.value = ''; mInput.value = ''; yInput.value = ''; sInput.value = 'desc';
+            updateFilters();
+        });
+
         if (window.lucide) window.lucide.createIcons();
     },
 
+    formatDisplayDate(isoDate) {
+        if (!isoDate) return '';
+        const [y, m, d] = isoDate.split('-');
+        return `${d}-${m}-${y}`;
+    },
+
     renderList(target, list) {
-        if (list.length === 0) {
-            target.innerHTML = '<p class="empty-state">No hay visitas programadas.</p>';
+        let filtered = [...list].filter(e => {
+            const matchesQuery = !this.filters.query ||
+                e.talk_title.toLowerCase().includes(this.filters.query) ||
+                e.outline_number.includes(this.filters.query) ||
+                e.speaker_name.toLowerCase().includes(this.filters.query);
+
+            const matchesCong = !this.filters.congregation ||
+                e.congregation_origin.toLowerCase().includes(this.filters.congregation);
+
+            const [y, m, d] = e.date.split('-');
+            const matchesMonth = !this.filters.month || m === this.filters.month;
+            const matchesYear = !this.filters.year || y === this.filters.year;
+
+            const matchesMinDate = !this.filters.minDate || e.date >= this.filters.minDate;
+
+            return matchesQuery && matchesCong && matchesMonth && matchesYear && matchesMinDate;
+        });
+
+        if (filtered.length === 0) {
+            target.innerHTML = '<p class="empty-state">No se encontraron resultados con los filtros actuales.</p>';
             return;
         }
 
-        target.innerHTML = list.sort((a, b) => new Date(a.date) - new Date(b.date)).map(e => this.renderEventCard(e)).join('');
+        filtered.sort((a, b) => {
+            const da = new Date(a.date);
+            const db = new Date(b.date);
+            return this.filters.sort === 'desc' ? db - da : da - db;
+        });
+
+        target.innerHTML = filtered.map(e => this.renderEventCard(e)).join('');
         if (window.lucide) window.lucide.createIcons();
         this.updateSelectionBar();
     },
 
     renderEventCard(e) {
         const isSelected = this.selectedIds.has(e.id);
-        const dayNames = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+        const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         const dateObj = new Date(e.date + 'T12:00:00');
         const dayName = dayNames[dateObj.getDay()];
 
         return `
-            <div class="card event-card ${isSelected ? 'selected' : ''}" data-id="${e.id}">
+            <div class="card event-card ${isSelected ? 'selected' : ''}" data-id="${e.id}" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem;">
                 <div class="card-selection">
                     <input type="checkbox" class="bulk-check" data-id="${e.id}" onchange="Incoming.toggleSelection('${e.id}')" ${isSelected ? 'checked' : ''}>
                 </div>
-                <div class="event-info" onclick="Incoming.showModal('${e.id}')">
-                    <div class="event-date-badge">
-                        <span class="day">${dayName}</span>
-                        <span class="date">${e.date.split('-')[2]}</span>
+                <div class="event-info" onclick="Incoming.showModal('${e.id}')" style="display: flex; gap: 1.5rem; flex: 1; align-items: center;">
+                    <div class="event-date-badge" style="width: auto; min-width: 140px; padding: 0.5rem 1rem; flex-direction: column; align-items: flex-start; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid var(--glass-border);">
+                        <span class="day" style="font-size: 0.8rem; text-transform: uppercase; color: var(--primary); font-weight: 800;">${dayName}</span>
+                        <span class="date" style="font-size: 1.1rem; font-weight: 700; color: white;">${this.formatDisplayDate(e.date)}</span>
                     </div>
-                    <div class="event-details">
-                        <strong>${e.speaker_name}</strong>
-                        <p class="origin"><i data-lucide="map-pin"></i> ${e.congregation_origin}</p>
-                        <span class="talk-info">#${e.outline_number} ${e.talk_title}</span>
+                    <div class="event-details" style="flex: 1;">
+                        <strong style="font-size: 1.2rem; display: block; margin-bottom: 0.25rem;">${e.speaker_name}</strong>
+                        <p class="origin" style="display: flex; align-items: center; gap: 5px; color: var(--text-dim); margin-bottom: 0.25rem;">
+                            <i data-lucide="map-pin" style="width: 14px;"></i> ${e.congregation_origin}
+                        </p>
+                        <span class="talk-info" style="color: var(--accent); font-weight: 600;">#${e.outline_number} ${e.talk_title}</span>
                     </div>
                 </div>
-                <div class="event-actions">
-                    <button class="btn-icon" onclick="Incoming.showModal('${e.id}')">
+                <div class="event-actions" style="display: flex; gap: 0.75rem;">
+                    <div class="notification-group" style="display: flex; gap: 0.4rem; background: rgba(0,0,0,0.2); padding: 0.4rem; border-radius: 12px;">
+                         <button class="btn btn-secondary btn-small" title="Notificar Discursante" onclick="event.stopPropagation(); Incoming.shareWhatsApp('${e.id}', 'speaker')" style="width: 42px; height: 42px; padding: 0;">
+                            <i data-lucide="user"></i>
+                        </button>
+                        <button class="btn btn-secondary btn-small" title="Notificar Coordinador Origen" onclick="event.stopPropagation(); Incoming.shareWhatsApp('${e.id}', 'coordinator')" style="width: 42px; height: 42px; padding: 0;">
+                            <i data-lucide="map-pin"></i>
+                        </button>
+                    </div>
+                    <button class="btn-icon" onclick="event.stopPropagation(); Incoming.showModal('${e.id}')" style="width: 42px; height: 42px;">
                         <i data-lucide="edit-3"></i>
                     </button>
-                    <button class="btn-icon error" onclick="Incoming.handleSingleDelete('${e.id}')">
+                    <button class="btn-icon error" onclick="event.stopPropagation(); Incoming.handleSingleDelete('${e.id}')" style="width: 42px; height: 42px;">
                         <i data-lucide="trash-2"></i>
                     </button>
                 </div>

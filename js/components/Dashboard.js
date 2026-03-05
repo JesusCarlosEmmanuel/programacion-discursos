@@ -10,31 +10,34 @@ export const Dashboard = {
         const alerts = this.getUpcomingAlerts();
 
         container.innerHTML = `
-            <div class="view-header">
-                <h2>Panel de Control</h2>
-                <div class="congregation-badge">
-                    <i data-lucide="home"></i> ${State.congregation?.name || 'Congregación Local'}
+            <div class="view-header" style="justify-content: space-between; align-items: flex-start;">
+                <h1 style="font-size: 2rem; font-weight: 800;">Panel de Control</h1>
+                <div class="congregation-badge" style="background: transparent; border: none; padding: 0;">
+                    <i data-lucide="home" style="color: white; width: 24px; height: 24px;"></i> 
+                    <span style="font-size: 1.2rem; font-weight: 600;">${State.congregation?.name || 'Congregación Local'}</span>
                 </div>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-card">
+            <div class="stats-grid" style="margin-top: 2rem;">
+                <div class="stat-card neon-card-pink" onclick="window.router.navigate('outgoing?filter=recent')" style="cursor: pointer;">
                     <span class="stat-value">${stats.outgoing}</span>
-                    <span class="stat-label">Salidas (Van)</span>
+                    <span class="stat-label">SALIDAS (VAN)</span>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card neon-card-purple" onclick="window.router.navigate('incoming?filter=recent')" style="cursor: pointer;">
                     <span class="stat-value">${stats.incoming}</span>
-                    <span class="stat-label">Visitas (Vienen)</span>
+                    <span class="stat-label">VISITAS (VIENEN)</span>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card neon-card-blue" onclick="window.router.navigate('authorized')" style="cursor: pointer;">
                     <span class="stat-value">${stats.totalSpeakers}</span>
-                    <span class="stat-label">Discursantes</span>
+                    <span class="stat-label">DISCURSANTES</span>
                 </div>
             </div>
 
-            <section class="alerts-section">
-                <h3><i data-lucide="bell"></i> Alertas Próximas (10 días)</h3>
-                <div id="alerts-list">
+            <section class="alerts-section" style="margin-top: 3rem;">
+                <h3 style="display: flex; align-items: center; gap: 10px; font-size: 1.4rem;">
+                    <i data-lucide="bell"></i> Alertas Próximas (10 días)
+                </h3>
+                <div id="alerts-list" style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
                     ${alerts.length === 0 ? `
                         <div class="empty-state">
                             <i data-lucide="check-circle"></i>
@@ -51,11 +54,23 @@ export const Dashboard = {
     },
 
     getStats() {
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+        const recentOutgoing = State.outgoing.filter(e => new Date(e.date + 'T12:00:00') >= sixtyDaysAgo);
+        const recentIncoming = State.incoming.filter(e => new Date(e.date + 'T12:00:00') >= sixtyDaysAgo);
+
         return {
-            outgoing: State.outgoing.length,
-            incoming: State.incoming.length,
+            outgoing: recentOutgoing.length,
+            incoming: recentIncoming.length,
             totalSpeakers: State.authorized.length
         };
+    },
+
+    formatDisplayDate(isoDate) {
+        if (!isoDate) return '';
+        const [y, m, d] = isoDate.split('-');
+        return `${d}-${m}-${y}`;
     },
 
     getUpcomingAlerts() {
@@ -69,27 +84,29 @@ export const Dashboard = {
         const realAlerts = [...outgoing, ...incoming]
             .filter(e => {
                 const eventDate = new Date(e.date + 'T12:00:00');
-                return eventDate >= now && eventDate <= tenDaysLater;
-            })
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return eventDate >= today && eventDate <= tenDaysLater;
+            });
 
-        // 30-day Missing Weekend alert
+        // Gap alert logic (Free weekends: Sat & Sun)
         const gapAlerts = [];
         const thirtyDaysLater = new Date();
         thirtyDaysLater.setDate(now.getDate() + 30);
 
-        const localDayMap = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
-        const meetingDayName = State.congregation?.meeting_day || 'Domingo';
-        const meetingDayIndex = localDayMap[meetingDayName];
-
-        // Ensure we handle weekends properly if the user meeting day is set
-        const dayCheck = meetingDayIndex !== undefined ? meetingDayIndex : 0;
-
         for (let d = new Date(now); d <= thirtyDaysLater; d.setDate(d.getDate() + 1)) {
-            if (d.getDay() === dayCheck) {
-                const dateStr = d.toISOString().split('T')[0];
+            const dayOfWeek = d.getDay();
+            // Saturday = 6, Sunday = 0
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const dateStr = `${yyyy}-${mm}-${dd}`;
+
                 const hasIncoming = State.incoming.some(e => e.date === dateStr);
-                if (!hasIncoming) {
+                const hasOutgoing = State.outgoing.some(e => e.date === dateStr);
+
+                if (!hasIncoming && !hasOutgoing) {
                     gapAlerts.push({
                         id: 'gap-' + dateStr,
                         type: 'gap',
@@ -102,31 +119,34 @@ export const Dashboard = {
             }
         }
 
-        // Combine and limit
-        return [...gapAlerts.slice(0, 3), ...realAlerts].sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Return gap alerts only for the next 4 weekends
+        return [...gapAlerts.slice(0, 4), ...realAlerts].sort((a, b) => new Date(a.date) - new Date(b.date));
     },
 
     renderAlertCard(alert) {
+        const dayNamesSpan = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const dateObj = new Date(alert.date + 'T12:00:00');
+        const dayName = dayNamesSpan[dateObj.getDay()];
+        const displayDate = this.formatDisplayDate(alert.date);
+
         if (alert.type === 'gap') {
-            const dayNamesSpan = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            const dayName = dayNamesSpan[new Date(alert.date + 'T12:00:00').getDay()];
             return `
-                <div class="card alert-card card-urgent" data-type="gap">
+                <div class="card alert-card gap-card" style="border-left: 5px solid #ff7b7b; padding: 1.5rem; background: rgba(30,30,50,0.5); border-radius: 20px;">
                     <div class="alert-info">
-                        <div class="alert-header">
-                            <span class="badge" style="background:var(--danger); color:white">
+                        <div class="alert-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+                            <span class="badge" style="background:#ff5c5c; color:white; font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; font-weight: 800;">
                                 Vacío
                             </span>
-                            <span class="alert-date countdown-urgent">
-                                ${dayName} ${alert.date}
+                            <span class="alert-date" style="color:#ff7b7b; font-size: 1.2rem; font-weight: 800;">
+                                ${dayName} ${displayDate}
                             </span>
                         </div>
-                        <strong>FIN DE SEMANA LIBRE</strong>
-                        <p class="talk-title" style="color:var(--danger)">No hay discursante programado.</p>
+                        <h2 style="font-size: 1.6rem; font-weight: 900; letter-spacing: 1px; margin: 0.5rem 0;">FIN DE SEMANA LIBRE</h2>
+                        <p style="color:#ff7b7b; font-size: 1.1rem;">No hay discursante programado.</p>
                     </div>
-                    <div class="alert-actions" style="display:flex; flex-direction:column; gap:5px">
-                        <button class="btn btn-secondary btn-small" onclick="document.getElementById('nav-incoming').click()">
-                            <i data-lucide="plus-circle" style="width:14px"></i> Agendar Ahora
+                    <div class="alert-actions">
+                        <button class="btn btn-secondary" onclick="window.router.navigate('incoming')" style="border-radius: 12px; display: flex; align-items: center; gap: 8px; font-weight: 600; background: rgba(255,255,255,0.05);">
+                            <i data-lucide="plus-circle" style="width:18px"></i> Agendar Ahora
                         </button>
                     </div>
                 </div>
@@ -134,37 +154,32 @@ export const Dashboard = {
         }
 
         const isOutgoing = alert.type === 'outgoing';
-        const daysLeft = Math.ceil((new Date(alert.date + 'T12:00:00') - new Date()) / (1000 * 60 * 60 * 24));
-        const isUrgent = daysLeft < 4;
-        const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-        const dayName = dayNames[new Date(alert.date + 'T12:00:00').getDay()];
-
         const speaker = isOutgoing
             ? State.authorized.find(s => s.id === alert.speaker_id)
             : { name: alert.speaker_name, phone: alert.speaker_phone };
 
         return `
-            <div class="card alert-card ${isUrgent ? 'card-urgent' : ''}" data-type="${alert.type}">
+            <div class="card alert-card" style="border-left: 5px solid ${isOutgoing ? '#6366f1' : '#f472b6'}; padding: 1.5rem; background: rgba(30,30,50,0.5); border-radius: 20px;">
                 <div class="alert-info">
-                    <div class="alert-header">
-                        <span class="badge ${isOutgoing ? 'badge-outgoing' : 'badge-incoming'}">
+                    <div class="alert-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+                        <span class="badge" style="background:${isOutgoing ? '#6366f1' : '#f472b6'}; color:white; font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; font-weight: 800;">
                             ${isOutgoing ? 'Salida' : 'Visita'}
                         </span>
-                        <span class="alert-date ${isUrgent ? 'countdown-urgent' : ''}">
-                            ${dayName} ${alert.date} - ${alert.time}
+                        <span class="alert-date" style="color:white; font-size: 1.2rem; font-weight: 800;">
+                            ${dayName} ${displayDate} - ${alert.time}
                         </span>
                     </div>
-                    <strong>${speaker?.name || 'Desconocido'}</strong>
-                    <p class="talk-title">#${alert.outline_number} ${alert.talk_title}</p>
-                    <p class="location"><i data-lucide="map-pin"></i> ${isOutgoing ? alert.destination_congregation : 'Local'}</p>
+                    <h2 style="font-size: 1.6rem; font-weight: 900; letter-spacing: 1px; margin: 0.5rem 0;">${speaker?.name || 'Desconocido'}</h2>
+                    <p style="font-size: 1.1rem; color: #94a3b8;">#${alert.outline_number} ${alert.talk_title}</p>
+                    <p class="location" style="margin-top: 5px; color: #94a3b8;"><i data-lucide="map-pin" style="width:14px"></i> ${isOutgoing ? alert.destination_congregation : 'Local'}</p>
                 </div>
-                <div class="alert-actions" style="display:flex; flex-direction:column; gap:5px">
+                <div class="alert-actions" style="display:flex; flex-direction:column; gap:8px">
                     <button class="btn btn-secondary btn-small" onclick="Dashboard.openWhatsApp('${alert.type}', '${alert.id}', 'speaker')">
-                        <i data-lucide="message-circle" style="width:14px"></i> Recordar Discursante
+                        <i data-lucide="message-circle" style="width:14px"></i> Recordar
                     </button>
                     ${isOutgoing ? `
                     <button class="btn btn-secondary btn-small" onclick="Dashboard.openWhatsApp('${alert.type}', '${alert.id}', 'coordinator')">
-                        <i data-lucide="send" style="width:14px"></i> Avisar Coordinador
+                        <i data-lucide="send" style="width:14px"></i> Avisar Coord.
                     </button>
                     ` : ''}
                 </div>

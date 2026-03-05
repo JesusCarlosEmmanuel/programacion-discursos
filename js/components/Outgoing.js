@@ -5,8 +5,24 @@ import { PhoneUtils } from '../utils/phone.js';
 
 export const Outgoing = {
     selectedIds: new Set(),
+    filters: {
+        query: '',
+        congregation: '',
+        year: '',
+        month: '',
+        sort: 'desc'
+    },
 
-    render() {
+    render(params) {
+        // Reset or set filters based on params
+        if (params && params.get('filter') === 'recent') {
+            const sixtyDaysAgo = new Date();
+            sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+            this.filters.minDate = sixtyDaysAgo.toISOString().split('T')[0];
+        } else {
+            delete this.filters.minDate;
+        }
+
         const container = document.createElement('div');
         container.className = 'events-view';
 
@@ -20,7 +36,7 @@ export const Outgoing = {
             <div class="view-header" style="flex-wrap: wrap; gap: 0.5rem">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <input type="checkbox" id="select-all-outgoing" title="Seleccionar todos">
-                    <h2>Discursantes que Van</h2>
+                    <h2>Discursantes que Van (Salidas)</h2>
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex: 1; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
                     <label class="btn btn-secondary btn-small" style="cursor: pointer; margin: 0">
@@ -31,6 +47,24 @@ export const Outgoing = {
                         <i data-lucide="plus"></i> Agendar Salida
                     </button>
                 </div>
+            </div>
+
+            <div class="filter-bar card" style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 0.75rem; margin-bottom: 1rem;">
+                <input type="text" id="filter-query" placeholder="Buscar por discurso o título..." style="flex: 2; min-width: 200px;" value="${this.filters.query}">
+                <input type="text" id="filter-cong" placeholder="Congregación Destino..." style="flex: 1; min-width: 150px;" value="${this.filters.congregation}">
+                <select id="filter-month" style="flex: 0.8; min-width: 100px;">
+                    <option value="">Mes...</option>
+                    ${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => `<option value="${(i + 1).toString().padStart(2, '0')}" ${this.filters.month === (i + 1).toString().padStart(2, '0') ? 'selected' : ''}>${m}</option>`).join('')}
+                </select>
+                <select id="filter-year" style="flex: 0.8; min-width: 80px;">
+                    <option value="">Año...</option>
+                    ${[2024, 2025, 2026, 2027].map(y => `<option value="${y}" ${this.filters.year == y ? 'selected' : ''}>${y}</option>`).join('')}
+                </select>
+                <select id="filter-sort" style="flex: 0.8; min-width: 120px;">
+                    <option value="desc" ${this.filters.sort === 'desc' ? 'selected' : ''}>Nuevo a Viejo</option>
+                    <option value="asc" ${this.filters.sort === 'asc' ? 'selected' : ''}>Viejo a Nuevo</option>
+                </select>
+                <button class="btn btn-secondary btn-small" id="btn-clear-filters"><i data-lucide="rotate-ccw"></i></button>
             </div>
 
             <div class="event-list">
@@ -53,16 +87,70 @@ export const Outgoing = {
             selectAll.addEventListener('change', (e) => this.toggleAll(e.target.checked));
         }
 
+        // Filter events
+        const qInput = container.querySelector('#filter-query');
+        const cInput = container.querySelector('#filter-cong');
+        const mInput = container.querySelector('#filter-month');
+        const yInput = container.querySelector('#filter-year');
+        const sInput = container.querySelector('#filter-sort');
+        const clearBtn = container.querySelector('#btn-clear-filters');
+
+        const updateFilters = () => {
+            this.filters.query = qInput.value.toLowerCase();
+            this.filters.congregation = cInput.value.toLowerCase();
+            this.filters.month = mInput.value;
+            this.filters.year = yInput.value;
+            this.filters.sort = sInput.value;
+            this.renderList(container.querySelector('.event-list'), State.outgoing);
+        };
+
+        [qInput, cInput, mInput, yInput, sInput].forEach(el => el.addEventListener('input', updateFilters));
+        clearBtn.addEventListener('click', () => {
+            qInput.value = ''; cInput.value = ''; mInput.value = ''; yInput.value = ''; sInput.value = 'desc';
+            updateFilters();
+        });
+
         if (window.lucide) window.lucide.createIcons();
     },
 
+    formatDisplayDate(isoDate) {
+        if (!isoDate) return '';
+        const [y, m, d] = isoDate.split('-');
+        return `${d}-${m}-${y}`;
+    },
+
     renderList(target, list) {
-        if (list.length === 0) {
-            target.innerHTML = '<p class="empty-state">No hay salidas programadas.</p>';
+        let filtered = [...list].filter(e => {
+            const speaker = State.authorized.find(s => s.id === e.speaker_id);
+            const matchesQuery = !this.filters.query ||
+                e.talk_title.toLowerCase().includes(this.filters.query) ||
+                e.outline_number.includes(this.filters.query) ||
+                (speaker && speaker.name.toLowerCase().includes(this.filters.query));
+
+            const matchesCong = !this.filters.congregation ||
+                e.destination_congregation.toLowerCase().includes(this.filters.congregation);
+
+            const [y, m, d] = e.date.split('-');
+            const matchesMonth = !this.filters.month || m === this.filters.month;
+            const matchesYear = !this.filters.year || y === this.filters.year;
+
+            const matchesMinDate = !this.filters.minDate || e.date >= this.filters.minDate;
+
+            return matchesQuery && matchesCong && matchesMonth && matchesYear && matchesMinDate;
+        });
+
+        if (filtered.length === 0) {
+            target.innerHTML = '<p class="empty-state">No se encontraron resultados con los filtros actuales.</p>';
             return;
         }
 
-        target.innerHTML = list.sort((a, b) => new Date(a.date) - new Date(b.date)).map(e => this.renderEventCard(e)).join('');
+        filtered.sort((a, b) => {
+            const da = new Date(a.date);
+            const db = new Date(b.date);
+            return this.filters.sort === 'desc' ? db - da : da - db;
+        });
+
+        target.innerHTML = filtered.map(e => this.renderEventCard(e)).join('');
         if (window.lucide) window.lucide.createIcons();
         this.updateSelectionBar();
     },
@@ -70,31 +158,41 @@ export const Outgoing = {
     renderEventCard(e) {
         const speaker = State.authorized.find(s => s.id === e.speaker_id);
         const isSelected = this.selectedIds.has(e.id);
-        const dayNames = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
-        const dateObj = new Date(e.date + 'T12:00:00'); // Prevent shifting
+        const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const dateObj = new Date(e.date + 'T12:00:00');
         const dayName = dayNames[dateObj.getDay()];
 
         return `
-            <div class="card event-card ${isSelected ? 'selected' : ''}" data-id="${e.id}">
+            <div class="card event-card ${isSelected ? 'selected' : ''}" data-id="${e.id}" style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem;">
                 <div class="card-selection">
                     <input type="checkbox" class="bulk-check" data-id="${e.id}" onchange="Outgoing.toggleSelection('${e.id}')" ${isSelected ? 'checked' : ''}>
                 </div>
-                <div class="event-info" onclick="Outgoing.showModal('${e.id}')">
-                    <div class="event-date-badge">
-                        <span class="day">${dayName}</span>
-                        <span class="date">${e.date.split('-')[2]}</span>
+                <div class="event-info" onclick="Outgoing.showModal('${e.id}')" style="display: flex; gap: 1.5rem; flex: 1; align-items: center;">
+                    <div class="event-date-badge" style="width: auto; min-width: 140px; padding: 0.5rem 1rem; flex-direction: column; align-items: flex-start; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid var(--glass-border);">
+                        <span class="day" style="font-size: 0.8rem; text-transform: uppercase; color: var(--primary); font-weight: 800;">${dayName}</span>
+                        <span class="date" style="font-size: 1.1rem; font-weight: 700; color: white;">${this.formatDisplayDate(e.date)}</span>
                     </div>
-                    <div class="event-details">
-                        <strong>${speaker?.name || 'Desconocido'}</strong>
-                        <p class="destination"><i data-lucide="map-pin"></i> ${e.destination_congregation}</p>
-                        <span class="talk-info">#${e.outline_number} ${e.talk_title}</span>
+                    <div class="event-details" style="flex: 1;">
+                        <strong style="font-size: 1.2rem; display: block; margin-bottom: 0.25rem;">${speaker?.name || 'Desconocido'}</strong>
+                        <p class="destination" style="display: flex; align-items: center; gap: 5px; color: var(--text-dim); margin-bottom: 0.25rem;">
+                            <i data-lucide="map-pin" style="width: 14px;"></i> ${e.destination_congregation}
+                        </p>
+                        <span class="talk-info" style="color: var(--secondary); font-weight: 600;">#${e.outline_number} ${e.talk_title}</span>
                     </div>
                 </div>
-                <div class="event-actions">
-                    <button class="btn-icon" onclick="Outgoing.showModal('${e.id}')">
+                <div class="event-actions" style="display: flex; gap: 0.75rem;">
+                     <div class="notification-group" style="display: flex; gap: 0.4rem; background: rgba(0,0,0,0.2); padding: 0.4rem; border-radius: 12px;">
+                        <button class="btn btn-secondary btn-small" title="Notificar Discursante" onclick="event.stopPropagation(); Outgoing.shareWhatsApp('${e.id}', 'speaker')" style="width: 42px; height: 42px; padding: 0;">
+                            <i data-lucide="user"></i>
+                        </button>
+                        <button class="btn btn-secondary btn-small" title="Notificar Coordinador Anfitrión" onclick="event.stopPropagation(); Outgoing.shareWhatsApp('${e.id}', 'coordinator')" style="width: 42px; height: 42px; padding: 0;">
+                            <i data-lucide="map-pin"></i>
+                        </button>
+                    </div>
+                    <button class="btn-icon" onclick="event.stopPropagation(); Outgoing.showModal('${e.id}')" style="width: 42px; height: 42px;">
                         <i data-lucide="edit-3"></i>
                     </button>
-                    <button class="btn-icon error" onclick="Outgoing.handleSingleDelete('${e.id}')">
+                    <button class="btn-icon error" onclick="event.stopPropagation(); Outgoing.handleSingleDelete('${e.id}')" style="width: 42px; height: 42px;">
                         <i data-lucide="trash-2"></i>
                     </button>
                 </div>
@@ -407,7 +505,6 @@ export const Outgoing = {
         if (!dateStr) return '';
         const months = { 'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04', 'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08', 'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12' };
 
-        // Remove day name (domingo, lunes...) and clean string
         let str = dateStr.toLowerCase().replace(/^[a-z]+,\s*/, '').trim();
 
         for (const [monthName, monthNum] of Object.entries(months)) {
@@ -419,6 +516,16 @@ export const Outgoing = {
                 }
             }
         }
+
+        // Handle DD/MM/YYYY or DD-MM-YYYY
+        const dmyMatch = dateStr.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+        if (dmyMatch) {
+            const d = dmyMatch[1].padStart(2, '0');
+            const m = dmyMatch[2].padStart(2, '0');
+            const y = dmyMatch[3];
+            return `${y}-${m}-${d}`;
+        }
+
         const d = new Date(dateStr);
         if (!isNaN(d)) return d.toISOString().split('T')[0];
         return '';

@@ -51,9 +51,10 @@ class Router {
 
     init() {
         try {
-            const hash = window.location.hash.replace('#', '');
-            const initialPage = this.routes[hash] ? hash : 'dashboard';
-            this.navigate(initialPage, true);
+            const fullPath = window.location.hash.replace('#', '');
+            const [page, query] = fullPath.split('?');
+            const initialPage = this.routes[page] ? page : 'dashboard';
+            this.navigate(fullPath || 'dashboard', true);
         } catch (e) {
             console.error("Router init failed:", e);
         }
@@ -66,11 +67,13 @@ class Router {
             }
 
             // Update Nav UI
-            this.navItems.forEach(item => {
-                if (item.getAttribute('data-page') === page) {
-                    item.classList.add('active');
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(btn => {
+                const id = btn.id;
+                if (id === `nav-${page}`) {
+                    btn.classList.add('active');
                 } else {
-                    item.classList.remove('active');
+                    btn.classList.remove('active');
                 }
             });
 
@@ -78,9 +81,12 @@ class Router {
             this.app.innerHTML = '';
 
             // Render Page
-            const Component = this.routes[page] || this.routes.dashboard;
+            const [pageId, queryStr] = page.split('?');
+            const params = new URLSearchParams(queryStr);
+            const Component = this.routes[pageId] || this.routes.dashboard;
+
             if (Component && Component.render) {
-                this.app.appendChild(Component.render());
+                this.app.appendChild(Component.render(params));
             }
 
             // Re-initialize icons

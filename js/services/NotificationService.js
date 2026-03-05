@@ -9,10 +9,19 @@ export const NotificationService = {
     },
 
     /**
+     * Standardizes date display to DD-MM-YYYY
+     */
+    formatDate(isoDate) {
+        if (!isoDate) return '';
+        const [y, m, d] = isoDate.split('-');
+        return `${d}-${m}-${y}`;
+    },
+
+    /**
      * Opens WhatsApp with a pre-formatted message
      * @param {string} type 'outgoing' or 'incoming'
      * @param {string} eventId ID of the event
-     * @param {string} target 'speaker' | 'coordinator' | 'coordinator2'
+     * @param {string} target 'speaker' | 'coordinator' | 'local_coordinator'
      */
     openWhatsApp(type, eventId, target = 'speaker') {
         const event = type === 'outgoing'
@@ -37,6 +46,7 @@ export const NotificationService = {
         const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
         const dateObj = new Date(event.date + 'T12:00:00');
         const dayName = dayNames[dateObj.getDay()];
+        const displayDate = this.formatDate(event.date);
         const local = State.congregation || {};
         const greeting = this.getGreeting();
 
@@ -46,30 +56,34 @@ export const NotificationService = {
         if (isOutgoing) {
             const dest = State.destinations.find(d => d.name === event.destination_congregation) || {};
             if (target === 'speaker') {
-                message = `${greeting} hermano ${speaker.name}, te recordamos tu discurso programado para este próximo ${dayName} ${event.date} en la congregación "${event.destination_congregation}".\n\n📌 Día y Horario: ${dest.meeting_day || '---'} a las ${event.time}\n📍 Domicilio: ${dest.address || '---'}\n📞 Contacto anfitrión: ${dest.contact_name || ''} (${dest.contact_phone || '---'})\n\nEl bosquejo que presentarás es el #${event.outline_number} "${event.talk_title}". ¡Mucho éxito en tu asignación!\n\nAtte: ${local.name || 'Mi Congregación'}`;
+                message = `${greeting} hermano ${speaker.name}, le recordamos su discurso programado para este próximo ${dayName} ${displayDate} en la congregación "${event.destination_congregation}".\n\n📌 Día y Horario: ${dest.meeting_day || '---'} a las ${event.time}\n📍 Domicilio: ${dest.address || '---'}\n📞 Contacto anfitrión: ${dest.contact_name || ''} (${dest.contact_phone || '---'})\n\nEl bosquejo que presentará es el #${event.outline_number} "${event.talk_title}". ¡Mucho éxito en su asignación!\n\nAtte: ${local.name || 'Mi Congregación'}`;
             } else if (target === 'coordinator') {
                 // Host Coordinator
                 phone = dest.contact_phone || '';
-                message = `${greeting} hermano ${dest.contact_name || 'Coordinador'}, te confirmo que el hermano ${speaker.name} (${speaker.phone}) asistirá con ustedes este próximo ${dayName} ${event.date} a las ${event.time}. Presentará el bosquejo #${event.outline_number} "${event.talk_title}"${event.song_number ? ` (Cántico ${event.song_number})` : ''}.\n\nSaludos fraternales de la Congregación ${local.name || ''}.`;
+                message = `${greeting} hermano ${dest.contact_name || 'Coordinador'}, le confirmo que el hermano ${speaker.name} (${speaker.phone}) asistirá con ustedes este próximo ${dayName} ${displayDate} a las ${event.time}. Presentará el bosquejo #${event.outline_number} "${event.talk_title}"${event.song_number ? ` (Cántico ${event.song_number})` : ''}.\n\nSaludos fraternales de la Congregación ${local.name || ''}.`;
             } else if (target === 'local_coordinator') {
                 // Local Coordinator
                 phone = local.scheduler?.phone || '';
-                message = `${greeting} hermano ${local.scheduler?.name || 'Coordinador'}, te informo para tu registro que el hermano ${speaker.name} tiene programado el discurso #${event.outline_number} en la congregación ${event.destination_congregation} el día ${event.date} a las ${event.time}. Saludos.`;
+                message = `${greeting} hermano ${local.scheduler?.name || 'Coordinador'}, le informo para su registro que el hermano ${speaker.name} tiene programado el discurso #${event.outline_number} en la congregación ${event.destination_congregation} el día ${displayDate} a las ${event.time}. Saludos.`;
             }
         } else {
             // Incoming
             const combined = [...State.destinations, ...State.origins];
             const origin = combined.find(o => o.name === event.congregation_origin) || {};
+
+            // Fix: Try to get phone from event if not found in masters
+            const coordPhone = event.speaker_phone || origin.contact_phone || '';
+
             if (target === 'speaker') {
-                message = `${greeting} hermano ${speaker.name}, te recordamos que te esperamos este próximo ${dayName} ${event.date} a las ${event.time} en nuestra congregación "${local.name || ''}".\n\n📍 Dirección: ${local.address || '---'}\n\nPresentarás el tema #${event.outline_number} "${event.talk_title}"${event.song_number ? ` (Cántico ${event.song_number})` : ''}.\n\nCualquier duda, tu contacto es: ${local.scheduler?.name || 'el coordinador'} (${local.scheduler?.phone || '---'}). ¡Te esperamos!`;
+                message = `${greeting} hermano ${speaker.name}, le recordamos que lo esperamos este próximo ${dayName} ${displayDate} a las ${event.time} en nuestra congregación "${local.name || ''}".\n\n📍 Dirección: ${local.address || '---'}\n\nUsted presentará el tema #${event.outline_number} "${event.talk_title}"${event.song_number ? ` (Cántico ${event.song_number})` : ''}.\n\nCualquier duda, su contacto es: ${local.scheduler?.name || 'el coordinador'} (${local.scheduler?.phone || '---'}). ¡Le esperamos!`;
             } else if (target === 'coordinator') {
                 // Origin Coordinator
-                phone = origin.contact_phone || '';
-                message = `${greeting} hermano ${origin.contact_name || 'Coordinador'} de la congregación ${event.congregation_origin}, te confirmo que esperamos a su discursante, el hermano ${speaker.name}, este próximo ${dayName} ${event.date} a las ${event.time} para presentar el bosquejo #${event.outline_number}.\n\nSaludos fraternales de la Congregación ${local.name || ''}.`;
+                phone = coordPhone;
+                message = `${greeting} hermano de la congregación ${event.congregation_origin}, le confirmo que esperamos a su discursante, el hermano ${speaker.name}, este próximo ${dayName} ${displayDate} a las ${event.time} para presentar el bosquejo #${event.outline_number}.\n\nSaludos fraternales de la Congregación ${local.name || ''}.`;
             } else if (target === 'local_coordinator') {
                 // Local Coordinator
                 phone = local.scheduler?.phone || '';
-                message = `${greeting} hermano ${local.scheduler?.name || 'Coordinador'}, te informo que el hermano ${speaker.name} (${speaker.phone}) de la congregación ${event.congregation_origin} está confirmado para presentar el discurso #${event.outline_number} el día ${event.date} a las ${event.time}. Saludos.`;
+                message = `${greeting} hermano ${local.scheduler?.name || 'Coordinador'}, le informo que el hermano ${speaker.name} (${speaker.phone}) de la congregación ${event.congregation_origin} está confirmado para presentar el discurso #${event.outline_number} el día ${displayDate} a las ${event.time}. Saludos.`;
             }
         }
 

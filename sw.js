@@ -1,4 +1,4 @@
-const CACHE_NAME = 'speaker-scheduler-v5.3';
+const CACHE_NAME = 'speaker-scheduler-v6.0';
 const ASSETS = [
     './',
     './index.html',
