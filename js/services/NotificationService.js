@@ -55,8 +55,9 @@ export const NotificationService = {
 
         if (isOutgoing) {
             const dest = State.destinations.find(d => d.name === event.destination_congregation) || {};
+            const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
             if (target === 'speaker') {
-                message = `${greeting} hermano ${speaker.name}, le recordamos su discurso programado para este próximo ${dayName} ${displayDate} en la congregación "${event.destination_congregation}".\n\n📌 Día y Horario: ${dest.meeting_day || '---'} a las ${event.time}\n📍 Domicilio: ${dest.address || '---'}\n📞 Contacto anfitrión: ${dest.contact_name || ''} (${dest.contact_phone || '---'})\n\nEl bosquejo que presentará es el #${event.outline_number} "${event.talk_title}". ¡Mucho éxito en su asignación!\n\nAtte: ${local.name || 'Mi Congregación'}`;
+                message = `${greeting} hermano ${speaker.name}, le recordamos su discurso programado para este próximo ${dayName} ${displayDate} en la congregación "${event.destination_congregation}".\n\n📌 Día y Horario: ${capitalizedDay} a las ${event.time}\n📍 Domicilio: ${dest.address || '---'}\n📞 Contacto anfitrión: ${dest.contact_name || ''} (${dest.contact_phone || '---'})\n\nEl bosquejo que presentará es el #${event.outline_number} "${event.talk_title}". ¡Mucho éxito en su asignación!\n\nAtte: ${local.name || 'Mi Congregación'}`;
             } else if (target === 'coordinator') {
                 // Host Coordinator
                 phone = dest.contact_phone || '';
