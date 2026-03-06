@@ -7,6 +7,8 @@ import { Reports } from './components/Reports.js';
 import { DataManagement } from './components/DataManagement.js';
 import { Masters } from './components/Masters.js';
 import { Calendar } from './components/Calendar.js';
+import { Login } from './components/Login.js';
+import { AuthService } from './services/AuthService.js';
 
 // Global exposure for debugging and inline event handlers
 window.State = State;
@@ -18,6 +20,8 @@ window.Reports = Reports;
 window.DataManagement = DataManagement;
 window.Masters = Masters;
 window.Calendar = Calendar;
+window.Login = Login;
+window.AuthService = AuthService;
 
 /**
  * Simple SPA Router
@@ -34,7 +38,8 @@ class Router {
             calendar: Calendar,
             reports: Reports,
             data: DataManagement,
-            masters: Masters
+            masters: Masters,
+            login: Login
         };
         window.router = this;
 
