@@ -108,6 +108,39 @@ class Router {
 }
 
 // Global UI Utils
+window.showChoiceModal = ({ title, message, options }) => {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('modal-container');
+        modal.classList.remove('hidden');
+        modal.innerHTML = `
+            <div class="modal-content card" style="max-width: 500px; width: 90%; animation: slideDown 0.3s ease-out;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem; color:var(--primary)">
+                    <i data-lucide="alert-triangle" style="width:24px; height:24px"></i>
+                    <h3 style="margin:0">${title}</h3>
+                </div>
+                <p style="margin-bottom:2rem; font-size:1.1rem; line-height:1.5">${message}</p>
+                <div style="display:flex; flex-direction:column; gap:10px">
+                    ${options.map(opt => `
+                        <button class="btn ${opt.class || 'btn-secondary'}" onclick="window._modalResolve('${opt.value}')" style="justify-content:center; padding: 12px; font-weight:600">
+                            ${opt.label}
+                        </button>
+                    `).join('')}
+                    <button class="btn btn-secondary" onclick="window._modalResolve('cancel')" style="justify-content:center; padding: 12px; opacity:0.7">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+
+        window._modalResolve = (val) => {
+            modal.classList.add('hidden');
+            delete window._modalResolve;
+            resolve(val);
+        };
+    });
+};
+
 window.showToast = (msg, type = 'info') => {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;

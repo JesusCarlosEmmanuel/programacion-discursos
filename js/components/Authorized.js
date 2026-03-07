@@ -422,81 +422,108 @@ export const Authorized = {
         window.showToast('Guardado correctamente', 'success');
     },
 
-    handleImportCSV(event) {
+    async handleImportCSV(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const text = e.target.result;
                 const rows = CSVUtils.parseAuto(text);
                 if (rows.length < 2) throw new Error("Archivo vacío o formato inválido");
 
-                // Check headers
-                // Based on image: Nombre discursante | No. Teléfono | No. Discurso | Título | Canción
-                // It might not be exact, so we'll just check if there are roughly enough columns.
-                // Assuming Name, Phone, Outline, Title, (optional Song)
-
-                let speakersMap = {}; // Key: name.toLowerCase()
-
-                // Load existing to map
-                State.authorized.forEach(s => {
-                    speakersMap[s.name.trim().toLowerCase()] = { ...s };
-                });
-
-                let parsedCount = 0;
+                const pendingRows = [];
                 let isFirstRow = true;
 
                 for (const row of rows) {
-                    // Skip header row roughly by checking if first col looks like a header
                     if (isFirstRow && row[0].toLowerCase().includes('nombre') && row[1].toLowerCase().includes('tel')) {
                         isFirstRow = false;
                         continue;
                     }
-                    if (row.length < 5) continue; // Need at least Nombre, Teléfono, Discurso, Título, Canción
+                    if (row.length < 4) continue;
 
                     const name = row[0].trim();
-                    const phone = PhoneUtils.validate(row[1].trim() || '');
-                    const outline = row[2].trim();
-                    const title = row[3].trim();
+                    const phone = PhoneUtils.validate(row[1] ? row[1].trim() : '');
+                    const outline = row[2] ? row[2].trim() : '';
+                    const title = row[3] ? row[3].trim() : '';
                     const song = row[4] ? row[4].trim() : '';
 
                     if (!name) continue;
 
-                    const key = name.toLowerCase();
+                    pendingRows.push({ name, phone, outline, title, song });
+                }
 
-                    if (!speakersMap[key]) {
-                        speakersMap[key] = {
+                if (pendingRows.length === 0) {
+                    window.showToast('No se encontraron datos válidos', 'warning');
+                    return;
+                }
+
+                // Identify duplicates: same speaker name AND same talk outline
+                const duplicates = [];
+                const trulyNew = [];
+
+                pendingRows.forEach(row => {
+                    const speaker = State.authorized.find(s => s.name.toLowerCase() === row.name.toLowerCase());
+                    const exists = speaker && speaker.talks.some(t => t.outline == row.outline && t.title == row.title);
+
+                    if (exists) duplicates.push(row);
+                    else trulyNew.push(row);
+                });
+
+                let toAdd = [...trulyNew];
+                if (duplicates.length > 0) {
+                    const choice = await window.showChoiceModal({
+                        title: '⚠️ Discursos Duplicados Detectados',
+                        message: `Se encontraron ${duplicates.length} discursos que ya están registrados para estos hermanos. ¿Qué deseas hacer?`,
+                        options: [
+                            { label: 'Omitir duplicados e importar solo nuevos', value: 'skip', class: 'btn-primary' },
+                            { label: 'Reemplazar los existentes (actualizar)', value: 'replace', class: 'btn-secondary' },
+                            { label: 'Crear copias (permitir duplicados)', value: 'copies', class: 'btn-secondary' }
+                        ]
+                    });
+
+                    if (choice === 'cancel') return;
+                    if (choice === 'copies') toAdd = [...trulyNew, ...duplicates];
+                    if (choice === 'replace') {
+                        // For 'replace' in Authorized, we just merge naturally but don't skip
+                        toAdd = [...trulyNew, ...duplicates];
+                        // We will deduplicate during insertion by outline
+                    }
+                }
+
+                // Process the toAdd list
+                toAdd.forEach(row => {
+                    let speaker = State.authorized.find(s => s.name.toLowerCase() === row.name.toLowerCase());
+                    if (!speaker) {
+                        speaker = {
                             id: crypto.randomUUID(),
-                            name: name,
-                            phone: phone,
+                            name: row.name,
+                            phone: row.phone,
                             contact_secondary: '',
                             comments: '',
                             talks: []
                         };
+                        State.authorized.push(speaker);
+                    } else if (row.phone && !speaker.phone) {
+                        speaker.phone = row.phone; // Update phone if missing
                     }
 
-                    // Check if talk already exists
-                    const existingTalk = speakersMap[key].talks.find(t => t.outline == outline);
-                    if (!existingTalk && outline) {
-                        speakersMap[key].talks.push({ outline, title, song });
+                    // Check if outline exists to avoid internal duplicates within the same import unless 'copies'
+                    const talkExists = speaker.talks.find(t => t.outline == row.outline);
+                    if (!talkExists || (choice === 'copies')) {
+                        speaker.talks.push({ outline: row.outline, title: row.title, song: row.song });
                     }
+                });
 
-                    parsedCount++;
-                }
-
-                State.authorized = Object.values(speakersMap);
                 State.saveToStorage('speaker_app_authorized', State.authorized);
-
                 this.renderList(document.querySelector('.speaker-list'), State.authorized);
-                window.showToast(`Se importaron ${parsedCount} discursos exitosamente`, 'success');
+                window.showToast(`Importación finalizada exitosamente`, 'success');
 
             } catch (error) {
                 console.error("Error importing CSV:", error);
                 window.showToast('Error al importar el archivo CSV', 'danger');
             }
-            // reset file input
             event.target.value = '';
         };
         reader.readAsText(file);

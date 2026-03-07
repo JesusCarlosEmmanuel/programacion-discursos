@@ -540,23 +540,24 @@ export const Incoming = {
             const ampm = match[4].toLowerCase().replace(/\./g, '').trim();
             if (ampm === 'pm' && h < 12) h += 12;
             if (ampm === 'am' && h === 12) h = 0;
+            if (amppm === 'am' && h === 12) h = 0;
             return `${h.toString().padStart(2, '0')}:${m}`;
         }
         return '12:00';
     },
 
-    handleImportCSV(event) {
+    async handleImportCSV(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const text = e.target.result;
                 const rows = CSVUtils.parseAuto(text);
                 if (rows.length < 2) throw new Error("Archivo vacío");
 
-                let parsedCount = 0;
+                const pendingData = [];
                 let isFirstRow = true;
 
                 for (const row of rows) {
@@ -595,25 +596,7 @@ export const Incoming = {
 
                     const formattedTime = this.parseTime(rawTime);
 
-                    // Auto-detect and add new foreign congregation (Origin)
-                    if (congregation) {
-                        const exists = State.origins.find(o => o.name.toLowerCase() === congregation.toLowerCase());
-                        if (!exists) {
-                            State.origins.push({
-                                id: crypto.randomUUID(),
-                                name: congregation,
-                                contact_name: 'Coordinador',
-                                contact_phone: phone, // Use speaker phone as a starting point if no other info
-                                address: '',
-                                meeting_day: '',
-                                meeting_time: formattedTime
-                            });
-                            State.saveToStorage('speaker_app_origins', State.origins);
-                        }
-                    }
-
-                    const data = {
-                        id: crypto.randomUUID(),
+                    pendingData.push({
                         speaker_name: speakerName,
                         speaker_phone: phone,
                         congregation_origin: congregation,
@@ -623,19 +606,96 @@ export const Incoming = {
                         date: formattedDate,
                         time: formattedTime,
                         comments: comments
-                    };
-
-                    State.incoming.push(data);
-                    parsedCount++;
+                    });
                 }
+
+                if (pendingData.length === 0) {
+                    window.showToast('No se encontraron datos válidos', 'warning');
+                    return;
+                }
+
+                // Split into new and duplicates
+                const duplicates = [];
+                const trulyNew = [];
+
+                pendingData.forEach(p => {
+                    const isDuplicate = State.incoming.some(item => {
+                        return item.speaker_name === p.speaker_name &&
+                            item.speaker_phone === p.speaker_phone &&
+                            item.congregation_origin === p.congregation_origin &&
+                            item.outline_number === p.outline_number &&
+                            item.talk_title === p.talk_title &&
+                            item.song_number === p.song_number &&
+                            item.date === p.date &&
+                            item.time === p.time &&
+                            item.comments === p.comments;
+                    });
+                    if (isDuplicate) duplicates.push(p);
+                    else trulyNew.push(p);
+                });
+
+                let toAdd = [...trulyNew];
+                if (duplicates.length > 0) {
+                    const choice = await window.showChoiceModal({
+                        title: '⚠️ Registros Duplicados Detectados',
+                        message: `Se encontraron ${duplicates.length} discursos que ya existen exactamente igual en el sistema. ¿Qué deseas hacer?`,
+                        options: [
+                            { label: 'Omitir duplicados e importar solo nuevos', value: 'skip', class: 'btn-primary' },
+                            { label: 'Reemplazar los existentes con estos nuevos', value: 'replace', class: 'btn-secondary' },
+                            { label: 'Crear copias duplicadas de todos', value: 'copies', class: 'btn-secondary' }
+                        ]
+                    });
+
+                    if (choice === 'cancel') return;
+                    if (choice === 'copies') toAdd = [...trulyNew, ...duplicates];
+                    if (choice === 'replace') {
+                        // Delete matching ones from State
+                        duplicates.forEach(d => {
+                            State.incoming = State.incoming.filter(item => {
+                                return !(item.speaker_name === d.speaker_name &&
+                                    item.speaker_phone === d.speaker_phone &&
+                                    item.congregation_origin === d.congregation_origin &&
+                                    item.outline_number === d.outline_number &&
+                                    item.talk_title === d.talk_title &&
+                                    item.song_number === d.song_number &&
+                                    item.date === d.date &&
+                                    item.time === d.time &&
+                                    item.comments === d.comments);
+                            });
+                        });
+                        toAdd = [...trulyNew, ...duplicates];
+                    }
+                }
+
+                // Process the final list
+                toAdd.forEach(data => {
+                    // Auto-detect and add new foreign congregation (Origin)
+                    if (data.congregation_origin) {
+                        const exists = State.origins.find(o => o.name.toLowerCase() === data.congregation_origin.toLowerCase());
+                        if (!exists) {
+                            State.origins.push({
+                                id: crypto.randomUUID(),
+                                name: data.congregation_origin,
+                                contact_name: 'Coordinador',
+                                contact_phone: data.speaker_phone, // Use speaker phone as a starting point if no other info
+                                address: '',
+                                meeting_day: '',
+                                meeting_time: data.time
+                            });
+                            State.saveToStorage('speaker_app_origins', State.origins);
+                        }
+                    }
+
+                    State.incoming.push({ ...data, id: crypto.randomUUID() });
+                });
 
                 State.saveToStorage('speaker_app_incoming', State.incoming);
                 this.renderList(document.querySelector('.event-list'), State.incoming);
-                window.showToast(`Se importaron ${parsedCount} visitas`, 'success');
+                window.showToast(`Importación finalizada: ${toAdd.length} registros procesados`, 'success');
 
             } catch (error) {
                 console.error("Error importing CSV:", error);
-                window.showToast('Error al importar CSV', 'danger');
+                window.showToast(error.message, 'danger');
             }
             event.target.value = '';
         };

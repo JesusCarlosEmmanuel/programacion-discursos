@@ -548,18 +548,18 @@ export const Outgoing = {
         return '10:00';
     },
 
-    handleImportCSV(event) {
+    async handleImportCSV(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const text = e.target.result;
                 const rows = CSVUtils.parseAuto(text);
                 if (rows.length < 2) throw new Error("Archivo vacío");
 
-                let parsedCount = 0;
+                const pendingData = [];
                 let isFirstRow = true;
 
                 for (const row of rows) {
@@ -585,32 +585,102 @@ export const Outgoing = {
 
                     const formattedTime = this.parseTime(rawTime);
 
-                    // Add to masters if new
-                    if (congregation) {
-                        const exists = State.destinations.find(d => d.name.toLowerCase() === congregation.toLowerCase());
+                    pendingData.push({
+                        congregation,
+                        contactRaw,
+                        address,
+                        speaker_name: speakerName,
+                        speaker_phone: speakerPhone,
+                        outline_number: outline,
+                        talk_title: title,
+                        date: formattedDate,
+                        time: formattedTime,
+                        comments: comments
+                    });
+                }
+
+                if (pendingData.length === 0) {
+                    window.showToast('No se encontraron datos válidos', 'warning');
+                    return;
+                }
+
+                // Split into new and duplicates
+                const duplicates = [];
+                const trulyNew = [];
+
+                pendingData.forEach(p => {
+                    const isDuplicate = State.outgoing.some(item => {
+                        const speaker = State.authorized.find(s => s.id === item.speaker_id);
+                        return speaker && speaker.name.toLowerCase() === p.speaker_name.toLowerCase() &&
+                            item.destination_congregation === p.congregation &&
+                            item.outline_number === p.outline_number &&
+                            item.talk_title === p.talk_title &&
+                            item.date === p.date &&
+                            item.time === p.time &&
+                            item.comments === p.comments;
+                    });
+                    if (isDuplicate) duplicates.push(p);
+                    else trulyNew.push(p);
+                });
+
+                let toAdd = [...trulyNew];
+                if (duplicates.length > 0) {
+                    const choice = await window.showChoiceModal({
+                        title: '⚠️ Salidas Duplicadas Detectadas',
+                        message: `Se encontraron ${duplicates.length} salidas que ya existen con la misma información. ¿Qué deseas hacer?`,
+                        options: [
+                            { label: 'Omitir duplicados e importar solo nuevos', value: 'skip', class: 'btn-primary' },
+                            { label: 'Reemplazar los existentes con estos nuevos', value: 'replace', class: 'btn-secondary' },
+                            { label: 'Crear copias duplicadas de todos', value: 'copies', class: 'btn-secondary' }
+                        ]
+                    });
+
+                    if (choice === 'cancel') return;
+                    if (choice === 'copies') toAdd = [...trulyNew, ...duplicates];
+                    if (choice === 'replace') {
+                        duplicates.forEach(d => {
+                            State.outgoing = State.outgoing.filter(item => {
+                                const speaker = State.authorized.find(s => s.id === item.speaker_id);
+                                return !(speaker && speaker.name.toLowerCase() === d.speaker_name.toLowerCase() &&
+                                    item.destination_congregation === d.congregation &&
+                                    item.outline_number === d.outline_number &&
+                                    item.talk_title === d.talk_title &&
+                                    item.date === d.date &&
+                                    item.time === d.time &&
+                                    item.comments === d.comments);
+                            });
+                        });
+                        toAdd = [...trulyNew, ...duplicates];
+                    }
+                }
+
+                // Process final list
+                toAdd.forEach(data => {
+                    // Update masters
+                    if (data.congregation) {
+                        const exists = State.destinations.find(d => d.name.toLowerCase() === data.congregation.toLowerCase());
                         if (!exists) {
-                            const phoneMatch = contactRaw.match(/(\+?\d[\d\s-]{7,}\d)/);
+                            const phoneMatch = data.contactRaw.match(/(\+?\d[\d\s-]{7,}\d)/);
                             const phone = phoneMatch ? PhoneUtils.validate(phoneMatch[1]) : '';
-                            const name = contactRaw.replace(phoneMatch ? phoneMatch[1] : '', '').trim();
+                            const name = data.contactRaw.replace(phoneMatch ? phoneMatch[1] : '', '').trim();
                             State.destinations.push({
                                 id: crypto.randomUUID(),
-                                name: congregation,
-                                address: address,
+                                name: data.congregation,
+                                address: data.address,
                                 contact_name: name || 'Coordinador',
                                 contact_phone: phone,
-                                meeting_day: '', meeting_time: formattedTime
+                                meeting_day: '', meeting_time: data.time
                             });
                             State.saveToStorage('speaker_app_destinations', State.destinations);
                         }
                     }
 
-                    // Find or create speaker
-                    let speaker = State.authorized.find(s => s.name.toLowerCase() === speakerName.toLowerCase());
+                    let speaker = State.authorized.find(s => s.name.toLowerCase() === data.speaker_name.toLowerCase());
                     if (!speaker) {
                         speaker = {
                             id: crypto.randomUUID(),
-                            name: speakerName,
-                            phone: PhoneUtils.validate(speakerPhone),
+                            name: data.speaker_name,
+                            phone: PhoneUtils.validate(data.speaker_phone),
                             contact_secondary: '',
                             comments: 'Auto-importado',
                             talks: []
@@ -619,31 +689,27 @@ export const Outgoing = {
                         State.saveToStorage('speaker_app_authorized', State.authorized);
                     }
 
-                    // Add talk if missing
-                    if (!speaker.talks.find(t => t.outline == outline) && outline) {
-                        speaker.talks.push({ outline, title, song: '' });
+                    if (!speaker.talks.find(t => t.outline == data.outline_number) && data.outline_number) {
+                        speaker.talks.push({ outline: data.outline_number, title: data.talk_title, song: '' });
                         State.saveToStorage('speaker_app_authorized', State.authorized);
                     }
 
-                    const data = {
+                    State.outgoing.push({
                         id: crypto.randomUUID(),
                         speaker_id: speaker.id,
-                        destination_congregation: congregation,
-                        outline_number: outline,
-                        talk_title: title,
+                        destination_congregation: data.congregation,
+                        outline_number: data.outline_number,
+                        talk_title: data.talk_title,
                         song_number: '',
-                        date: formattedDate,
-                        time: formattedTime,
-                        comments: comments
-                    };
-
-                    State.outgoing.push(data);
-                    parsedCount++;
-                }
+                        date: data.date,
+                        time: data.time,
+                        comments: data.comments
+                    });
+                });
 
                 State.saveToStorage('speaker_app_outgoing', State.outgoing);
                 this.renderList(document.querySelector('.event-list'), State.outgoing);
-                window.showToast(`Se importaron ${parsedCount} salidas`, 'success');
+                window.showToast(`Importación finalizada: ${toAdd.length} registros procesados`, 'success');
 
             } catch (error) {
                 console.error("Error importing CSV:", error);

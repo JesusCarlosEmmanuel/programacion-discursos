@@ -446,36 +446,31 @@ export const Masters = {
         window.onclick = null; // Remove the global click listener
     },
 
-    handleImportCSV(event) {
+    async handleImportCSV(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const text = e.target.result;
                 const rows = CSVUtils.parseAuto(text);
                 if (rows.length < 2) throw new Error("Archivo vacío");
 
-                let parsedCount = 0;
+                const pendingRows = [];
                 let isFirstRow = true;
 
                 for (const row of rows) {
                     if (isFirstRow && row[0].toLowerCase().includes('congregaci')) { isFirstRow = false; continue; }
-                    if (row.length < 2) continue;
+                    if (row.length < 1) continue;
 
                     const name = row[0].trim();
                     if (!name) continue;
-
-                    // Unified check for existence
-                    const exists = [...State.destinations, ...State.origins].find(i => i.name.toLowerCase() === name.toLowerCase());
-                    if (exists) continue;
 
                     let contact_name = '';
                     let contact_phone = '';
                     let address = '';
 
-                    // Try to be smart about the format (Congregación | Contacto | Dirección)
                     if (row.length >= 3) {
                         const rawContact = row[1];
                         address = row[2];
@@ -486,22 +481,66 @@ export const Masters = {
                         } else {
                             contact_name = rawContact.trim();
                         }
-                    } else {
+                    } else if (row.length >= 2) {
                         contact_phone = PhoneUtils.validate(row[1] ? row[1].trim() : '');
                     }
 
-                    const data = {
-                        id: crypto.randomUUID(),
-                        name, address, contact_name, contact_phone,
-                        contact_email: '', contact2_name: '', contact2_phone: '', contact2_email: ''
-                    };
-
-                    State.saveMaster('destinations', data, false);
-                    parsedCount++;
+                    pendingRows.push({ name, address, contact_name, contact_phone });
                 }
 
+                if (pendingRows.length === 0) {
+                    window.showToast('No se encontraron datos válidos', 'warning');
+                    return;
+                }
+
+                const duplicates = [];
+                const trulyNew = [];
+
+                pendingRows.forEach(row => {
+                    const exists = [...State.destinations, ...State.origins].find(i => i.name.toLowerCase() === row.name.toLowerCase());
+                    if (exists) duplicates.push(row);
+                    else trulyNew.push(row);
+                });
+
+                let toAdd = [...trulyNew];
+                if (duplicates.length > 0) {
+                    const choice = await window.showChoiceModal({
+                        title: '⚠️ Congregaciones Duplicadas Detectadas',
+                        message: `Se encontraron ${duplicates.length} congregaciones que ya están registradas. ¿Qué deseas hacer?`,
+                        options: [
+                            { label: 'Omitir duplicados e importar solo nuevas', value: 'skip', class: 'btn-primary' },
+                            { label: 'Reemplazar/Actualizar las existentes', value: 'replace', class: 'btn-secondary' },
+                            { label: 'Crear copias (usar nombres únicos)', value: 'copies', class: 'btn-secondary' }
+                        ]
+                    });
+
+                    if (choice === 'cancel') return;
+                    if (choice === 'copies') toAdd = [...trulyNew, ...duplicates];
+                    if (choice === 'replace') {
+                        // For replace, we delete existing from state before adding
+                        duplicates.forEach(d => {
+                            State.destinations = State.destinations.filter(i => i.name.toLowerCase() !== d.name.toLowerCase());
+                            State.origins = State.origins.filter(i => i.name.toLowerCase() !== d.name.toLowerCase());
+                        });
+                        toAdd = [...trulyNew, ...duplicates];
+                    }
+                }
+
+                toAdd.forEach(row => {
+                    const data = {
+                        id: crypto.randomUUID(),
+                        name: row.name,
+                        address: row.address,
+                        contact_name: row.contact_name || 'Coordinador',
+                        contact_phone: row.contact_phone,
+                        contact_email: '', contact2_name: '', contact2_phone: '', contact2_email: '',
+                        meeting_day: '', meeting_time: ''
+                    };
+                    State.saveMaster('destinations', data, false);
+                });
+
                 this.renderList(document.querySelector('.masters-view'));
-                window.showToast(`Se importaron ${parsedCount} congregaciones exitosamente`, 'success');
+                window.showToast(`Importación finalizada: ${toAdd.length} congregaciones procesadas`, 'success');
 
             } catch (error) {
                 console.error("Error importing CSV:", error);
