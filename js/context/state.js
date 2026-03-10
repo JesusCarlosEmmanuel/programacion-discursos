@@ -1,3 +1,4 @@
+import { OneDriveService } from '../services/OneDriveService.js';
 import { StorageService } from '../services/StorageService.js';
 
 const { KEYS } = StorageService;
@@ -14,6 +15,18 @@ export const State = {
 
     saveToStorage(key, data) {
         StorageService.save(key, data);
+        // Desencadenar sincronización si hay sesión activa
+        this.syncWithCloud();
+    },
+
+    async syncWithCloud() {
+        const user = localStorage.getItem('app_user');
+        if (user) {
+            const userData = JSON.parse(user);
+            if (userData.provider === 'microsoft') {
+                await OneDriveService.syncToCloud(this);
+            }
+        }
     },
 
     // Authorized Speakers Actions

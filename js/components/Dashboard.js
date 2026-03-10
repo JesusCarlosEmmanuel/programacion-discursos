@@ -10,8 +10,11 @@ export const Dashboard = {
         const alerts = this.getUpcomingAlerts();
 
         container.innerHTML = `
-            <div class="view-header" style="justify-content: space-between; align-items: flex-start;">
-                <h1 style="font-size: 2rem; font-weight: 800;">Panel de Control</h1>
+            <div class="view-header" style="justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h1 style="font-size: 2rem; font-weight: 800;">Panel de Control</h1>
+                    <div id="cloud-status-container"></div>
+                </div>
                 <div class="congregation-badge" style="background: transparent; border: none; padding: 0;">
                     <i data-lucide="home" style="color: white; width: 24px; height: 24px;"></i> 
                     <span style="font-size: 1.2rem; font-weight: 600;">${State.congregation?.name || 'Congregación Local'}</span>
@@ -50,8 +53,33 @@ export const Dashboard = {
 
         NotificationService.checkAutomatedAlerts();
         this.checkNewYear();
+        this.renderCloudStatus(container.querySelector('#cloud-status-container'));
         if (window.lucide) window.lucide.createIcons();
         return container;
+    },
+
+    renderCloudStatus(target) {
+        if (!target) return;
+        const user = localStorage.getItem('app_user');
+        if (!user) {
+            target.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; color:#94a3b8; font-size:0.9rem; cursor:pointer;" onclick="window.router.navigate('login')">
+                    <i data-lucide="cloud-off" style="width:14px"></i>
+                    Modo Local (Inicia sesión para respaldar en la nube)
+                </div>
+            `;
+        } else {
+            const data = JSON.parse(user);
+            target.innerHTML = `
+                <div style="display:flex; align-items:center; gap:12px; margin-top:5px;">
+                    <div style="display:flex; align-items:center; gap:8px; color:#22c55e; font-size:0.9rem;">
+                        <i data-lucide="cloud" style="width:16px"></i>
+                        OneDrive Conectado (${data.email})
+                    </div>
+                </div>
+            `;
+        }
+        if (window.lucide) window.lucide.createIcons();
     },
 
     checkNewYear() {

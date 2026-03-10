@@ -184,6 +184,11 @@ window.showUndo = (msg, callback) => {
     };
 };
 
+import { OneDriveService } from './services/OneDriveService.js';
+
+// Initialize OneDrive connection if account exists
+OneDriveService.init();
+
 // Start the app
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
