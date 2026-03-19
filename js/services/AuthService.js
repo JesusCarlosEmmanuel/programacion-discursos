@@ -1,25 +1,19 @@
-import { OneDriveService } from './OneDriveService.js';
+import { FirebaseService } from './FirebaseService.js';
 /**
  * AuthService.js
- * Handles user authentication across multiple providers (Firebase based).
+ * Handles user authentication via Firebase
  */
 
 export const AuthService = {
     user: null,
 
-    // Config will be populated via UI later
-    config: {
-        apiKey: localStorage.getItem('fb_api_key') || '',
-        authDomain: localStorage.getItem('fb_auth_domain') || '',
-        projectId: localStorage.getItem('fb_project_id') || ''
-    },
-
     async init() {
-        // Initialize Firebase if config exists
         console.log("AuthService Initializing...");
+        FirebaseService.init(); // Intentar inicializar si ya hay config
         const savedUser = localStorage.getItem('app_user');
         if (savedUser) {
             this.user = JSON.parse(savedUser);
+            // Auto login/refresh logic podria ir aqui en un futuro
         }
         return this.user;
     },
@@ -27,40 +21,50 @@ export const AuthService = {
     async login(provider) {
         console.log(`Logging in with ${provider}...`);
 
-        if (provider === 'microsoft') {
-            const success = await OneDriveService.login();
-            if (success && OneDriveService.account) {
-                const msUser = {
-                    uid: OneDriveService.account.homeAccountId,
-                    displayName: OneDriveService.account.name,
-                    email: OneDriveService.account.username,
-                    photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(OneDriveService.account.name)}&background=00a4ef&color=fff`,
-                    provider: 'microsoft'
-                };
-                this.user = msUser;
-                localStorage.setItem('app_user', JSON.stringify(this.user));
-                return this.user;
+        if (provider === 'google') {
+            try {
+                const fbUser = await FirebaseService.loginWithGoogle();
+                if (fbUser) {
+                    const mappedUser = {
+                        uid: fbUser.uid,
+                        displayName: fbUser.displayName,
+                        email: fbUser.email,
+                        photoURL: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName)}`,
+                        provider: 'google'
+                    };
+                    this.user = mappedUser;
+                    localStorage.setItem('app_user', JSON.stringify(this.user));
+
+                    // Al loguearte, descargar datos de la nube
+                    const cloudData = await FirebaseService.pullFromCloud(this.user.uid);
+                    if (cloudData) {
+                        // Importamos el state global
+                        import('../context/state.js').then(module => {
+                            module.State.importWholeState(cloudData);
+                            window.showToast("Datos descargados de la Nube", "success");
+                        });
+                    }
+
+                    return this.user;
+                }
+            } catch (error) {
+                console.error("Firebase Auth Falló:", error);
+                throw error;
             }
-            throw new Error("Microsoft login failed");
         }
 
-        // Mock login for other providers to demonstrate UI flow
-        const mockUser = {
-            uid: '12345',
-            displayName: 'Usuario Prueba',
-            email: 'usuario@ejemplo.com',
-            photoURL: 'https://ui-avatars.com/api/?name=Usuario+Prueba',
-            provider: provider
-        };
+        if (provider === 'microsoft' || provider === 'github' || provider === 'facebook') {
+            window.showToast("Este método estará disponible pronto. Por favor usa 'Continuar con Google'.", "info");
+            return null;
+        }
 
-        this.user = mockUser;
-        localStorage.setItem('app_user', JSON.stringify(this.user));
-        return this.user;
+        return null;
     },
 
     async logout() {
         this.user = null;
         localStorage.removeItem('app_user');
+        await FirebaseService.logout();
         window.location.reload();
     },
 

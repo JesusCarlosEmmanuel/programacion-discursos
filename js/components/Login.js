@@ -18,10 +18,10 @@ export const Login = {
             <div class="card neon-card-purple" style="max-width: 450px; width: 100%; padding: 3rem 2rem; border-radius: 30px; background: rgba(15, 15, 25, 0.8); backdrop-filter: blur(20px);">
                 <div class="login-header" style="margin-bottom: 2.5rem;">
                     <div style="background: var(--primary); width: 80px; height: 80px; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; box-shadow: 0 0 30px rgba(99, 102, 241, 0.5);">
-                        <i data-lucide="shield-check" style="color: white; width: 40px; height: 40px;"></i>
+                        <i data-lucide="cloud" style="color: white; width: 40px; height: 40px;"></i>
                     </div>
-                    <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; color: white;">Acceso Privado</h1>
-                    <p style="color: #94a3b8; font-size: 1.1rem;">Inicia sesión para sincronizar tu Excel personal en OneDrive.</p>
+                    <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; color: white;">Nube Personal</h1>
+                    <p style="color: #94a3b8; font-size: 1.1rem;">Inicia sesión para respaldar tu información de forma segura en Firebase y acceder desde cualquier dispositivo.</p>
                 </div>
 
                 <div class="auth-providers" style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
@@ -29,21 +29,7 @@ export const Login = {
                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
                         Continuar con Google
                     </button>
-                    
-                    <button class="btn-auth microsoft" onclick="Login.handleLogin('microsoft')">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" width="20">
-                        Continuar con Outlook / Microsoft
-                    </button>
-
-                    <button class="btn-auth github" onclick="Login.handleLogin('github')">
-                        <i data-lucide="github" style="width: 20px;"></i>
-                        Continuar con GitHub
-                    </button>
-
-                    <button class="btn-auth facebook" onclick="Login.handleLogin('facebook')">
-                        <i data-lucide="facebook" style="width: 20px; color: #1877F2;"></i>
-                        Continuar con Facebook
-                    </button>
+                    <!-- Email Login Could be added here in the future -->
                 </div>
 
                 <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1);">

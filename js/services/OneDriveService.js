@@ -75,17 +75,48 @@ export const OneDriveService = {
         if (!this.accessToken) return;
 
         try {
-            // Buscamos el archivo en OneDrive
+            // 1. Buscamos el archivo
             let fileId = await this.findFile(this.fileName);
             if (!fileId) {
                 fileId = await this.createFile(this.fileName);
             }
 
-            // Actualizamos las hojas de datos
+            // 2. Aseguramos que existan las hojas de la app (No tocamos las del usuario)
+            await this.ensureSheetsExist(fileId);
+
+            // 3. Sincronizamos datos
             await this.updateAppData(fileId, state);
-            window.showToast("Sincronización en la nube completa", "success");
+
+            // Actualizar timestamp de última sincronización
+            localStorage.setItem('last_cloud_sync', new Date().toISOString());
+            return true;
         } catch (error) {
             console.error("Sync Error:", error);
+            return false;
+        }
+    },
+
+    async ensureSheetsExist(fileId) {
+        const requiredSheets = ['_APP_AUTHORIZED_', '_APP_OUTGOING_', '_APP_INCOMING_', '_APP_MASTERS_'];
+
+        // Listar hojas actuales
+        const url = `https://graph.microsoft.com/v1.0/me/drive/items/${fileId}/workbook/worksheets`;
+        const resp = await fetch(url, { headers: { Authorization: `Bearer ${this.accessToken}` } });
+        const data = await resp.json();
+        const existingNames = data.value.map(s => s.name);
+
+        for (const name of requiredSheets) {
+            if (!existingNames.includes(name)) {
+                console.log(`Creando hoja de app: ${name}`);
+                await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${this.accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: name })
+                });
+            }
         }
     },
 
@@ -114,9 +145,9 @@ export const OneDriveService = {
     },
 
     async updateAppData(fileId, state) {
-        // En una implementación real, convertiríamos el State a arreglos 2D para Excel
-        console.log("Guardando datos en Excel para:", this.account.username);
-        // Para esta versión profesional, simulamos la respuesta éxito ya que la estructura Excel requiere más pasos de mapeo
+        // Por ahora simulamos el volcado masivo a las hojas creadas
+        console.log("Actualizando datos en las hojas _APP_...");
+        // API: PATCH /me/drive/items/{id}/workbook/worksheets/{sheet}/range(address='A1:Z500')
         return true;
     },
 

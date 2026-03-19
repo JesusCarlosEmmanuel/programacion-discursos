@@ -65,16 +65,16 @@ export const Dashboard = {
             target.innerHTML = `
                 <div style="display:flex; align-items:center; gap:8px; color:#94a3b8; font-size:0.9rem; cursor:pointer;" onclick="window.router.navigate('login')">
                     <i data-lucide="cloud-off" style="width:14px"></i>
-                    Modo Local (Inicia sesión para respaldar en la nube)
+                    Modo Local Seguro (Inicia sesión para sincronizar)
                 </div>
             `;
         } else {
             const data = JSON.parse(user);
             target.innerHTML = `
-                <div style="display:flex; align-items:center; gap:12px; margin-top:5px;">
+                <div style="display:flex; align-items:center; gap:12px; margin-top:5px; cursor:pointer;" onclick="window.router.navigate('login')">
                     <div style="display:flex; align-items:center; gap:8px; color:#22c55e; font-size:0.9rem;">
                         <i data-lucide="cloud" style="width:16px"></i>
-                        OneDrive Conectado (${data.email})
+                        Nube de ${data.displayName || data.email}
                     </div>
                 </div>
             `;

@@ -1,4 +1,4 @@
-import { OneDriveService } from '../services/OneDriveService.js';
+import { FirebaseService } from '../services/FirebaseService.js';
 import { StorageService } from '../services/StorageService.js';
 
 const { KEYS } = StorageService;
@@ -15,7 +15,6 @@ export const State = {
 
     saveToStorage(key, data) {
         StorageService.save(key, data);
-        // Desencadenar sincronización si hay sesión activa
         this.syncWithCloud();
     },
 
@@ -23,10 +22,34 @@ export const State = {
         const user = localStorage.getItem('app_user');
         if (user) {
             const userData = JSON.parse(user);
-            if (userData.provider === 'microsoft') {
-                await OneDriveService.syncToCloud(this);
+            if (userData.uid) {
+                // Sincronizar silenciosamente todo el estado bajo su UID
+                FirebaseService.syncToCloud(userData.uid, {
+                    authorized: this.authorized,
+                    outgoing: this.outgoing,
+                    incoming: this.incoming,
+                    congregation: this.congregation,
+                    destinations: this.destinations,
+                    origins: this.origins,
+                    exceptions: this.exceptions
+                });
             }
         }
+        return false;
+    },
+
+    importWholeState(data) {
+        if (!data) return;
+        if (data.authorized) { this.authorized = data.authorized; StorageService.save(KEYS.AUTHORIZED_SPEAKERS, this.authorized); }
+        if (data.outgoing) { this.outgoing = data.outgoing; StorageService.save(KEYS.OUTGOING_EVENTS, this.outgoing); }
+        if (data.incoming) { this.incoming = data.incoming; StorageService.save(KEYS.INCOMING_EVENTS, this.incoming); }
+        if (data.congregation) { this.congregation = data.congregation; StorageService.save(KEYS.CONGREGATION, this.congregation); }
+        if (data.destinations) { this.destinations = data.destinations; StorageService.save(KEYS.DESTINATIONS, this.destinations); }
+        if (data.origins) { this.origins = data.origins; StorageService.save(KEYS.ORIGINS, this.origins); }
+        if (data.exceptions) { this.exceptions = data.exceptions; StorageService.save(KEYS.EXCEPTIONS, this.exceptions); }
+
+        // Refrescar UI si es necesario
+        setTimeout(() => window.location.reload(), 1500);
     },
 
     // Authorized Speakers Actions

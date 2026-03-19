@@ -13,7 +13,12 @@ export const DataManagement = {
             </div>
 
             <section class="data-section card">
-                <h3><i data-lucide="home"></i> Perfil de mi Congregación</h3>
+                <h3><i data-lucide="cloud"></i> Nube y Sincronización</h3>
+                <p class="section-desc">Gestiona dónde se respaldan tus datos para acceder desde cualquier dispositivo.</p>
+                <div id="cloud-manager-container" style="margin-top:1rem; display:flex; flex-direction:column; gap:15px">
+                    <!-- Dinámico -->
+                </div>
+            </section>
                 <p class="section-desc">Datos locales para reportes y mensajes automáticos.</p>
                 <form id="congregation-profile-form" style="margin-top:1rem">
                     <div class="form-group">
@@ -156,8 +161,90 @@ export const DataManagement = {
             </section>
         `;
 
+        this.initCloudEvents(container);
         this.initEvents(container);
         return container;
+    },
+
+    renderCloudManager(target) {
+        if (!target) return;
+        const user = localStorage.getItem('app_user');
+        const lastSync = localStorage.getItem('last_cloud_sync') || 'Nunca';
+
+        if (!user) {
+            target.innerHTML = `
+                <div class="cloud-provider-selector" style="display:grid; grid-template-columns:1fr; gap:10px">
+                    <button class="btn btn-secondary" onclick="window.router.navigate('login')" style="justify-content:center; padding:15px; background: rgba(0,164,239,0.1); border-color:#00a4ef;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" width="20"> Conectar OneDrive (Excel)
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.router.navigate('login')" style="justify-content:center; padding:15px; opacity:0.6">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Conectar Google Drive (Próximamente)
+                    </button>
+                </div>
+                <p style="font-size:0.85rem; color:#94a3b8;"><i data-lucide="info" style="width:14px"></i> Actualmente operando en <b>Modo Local</b>. Tus datos solo viven en este dispositivo.</p>
+            `;
+        } else {
+            const data = JSON.parse(user);
+            target.innerHTML = `
+                <div style="background:rgba(255,255,255,0.05); padding:1.5rem; border-radius:15px; border:1px solid rgba(255,255,255,0.1)">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem">
+                        <div style="display:flex; align-items:center; gap:10px">
+                            <i data-lucide="check-circle" style="color:#22c55e"></i>
+                            <div>
+                                <h4 style="margin:0">${data.provider === 'microsoft' ? 'OneDrive Activo' : 'Google Drive Activo'}</h4>
+                                <span style="font-size:0.8rem; color:#94a3b8">${data.email}</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-danger btn-small" onclick="AuthService.logout()">Desconectar</button>
+                    </div>
+                    
+                    <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:1rem; display:flex; flex-direction:column; gap:8px">
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem">
+                            <span style="color:#94a3b8">Archivo en Nube:</span>
+                            <span style="color:white">ProgramacionDiscursos_Cloud.xlsx</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem">
+                            <span style="color:#94a3b8">Última Sincronización:</span>
+                            <span style="color:white">${lastSync}</span>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" style="width:100%; margin-top:1rem" id="btn-manual-sync">
+                        <i data-lucide="refresh-cw"></i> Sincronizar Ahora
+                    </button>
+                </div>
+                <p style="font-size:0.85rem; color:#94a3b8; font-style:italic">
+                    <i data-lucide="shield-check" style="width:14px"></i> Seguridad: La aplicación solo crea hojas especiales (_APP_) y no toca tus datos manuales existentes en el Excel.
+                </p>
+            `;
+        }
+        if (window.lucide) window.lucide.createIcons();
+    },
+
+    initCloudEvents(container) {
+        this.renderCloudManager(container.querySelector('#cloud-manager-container'));
+
+        container.addEventListener('click', async (e) => {
+            if (e.target.closest('#btn-manual-sync')) {
+                const btn = e.target.closest('#btn-manual-sync');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="spinner"></i> Sincronizando...';
+
+                try {
+                    const success = await State.syncWithCloud();
+                    if (success) {
+                        window.showToast("Sincronización manual completa", "success");
+                        this.renderCloudManager(container.querySelector('#cloud-manager-container'));
+                    }
+                } catch (err) {
+                    window.showToast("Error en sincronización", "danger");
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="refresh-cw"></i> Sincronizar Ahora';
+                    if (window.lucide) window.lucide.createIcons();
+                }
+            }
+        });
     },
 
     initEvents(container) {
