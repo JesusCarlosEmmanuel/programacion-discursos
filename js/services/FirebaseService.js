@@ -4,7 +4,7 @@
  */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 export const firebaseConfig = {
@@ -39,15 +39,37 @@ export const FirebaseService = {
         }
     },
 
+    async checkAuthResult() {
+        if (!isInitialized) return null;
+        try {
+            const result = await getRedirectResult(auth);
+            if (result && result.user) {
+                return result.user;
+            }
+        } catch (error) {
+            console.error("Error en Redirect Result:", error);
+        }
+        return null;
+    },
+
     async loginWithGoogle() {
         if (!this.init()) {
-            window.showToast("Firebase no está configurado. Ve a Ajustes > Modo Desarrollador o espera la configuración.", "warning");
+            window.showToast("Firebase no está configurado.", "warning");
             return null;
         }
         try {
             const provider = new GoogleAuthProvider();
-            const result = await signInWithPopup(auth, provider);
-            return result.user; // uid, displayName, email, photoURL
+            // Detectar si estamos en un PWA o móvil para usar Redirect en lugar de Popup
+            const isMobileOrPwa = window.innerWidth < 768 || window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+            if (isMobileOrPwa) {
+                window.showToast("Redirigiendo a Google...", "info");
+                await signInWithRedirect(auth, provider);
+                return null; // El hilo muere aquí y la página recarga
+            } else {
+                const result = await signInWithPopup(auth, provider);
+                return result.user;
+            }
         } catch (error) {
             console.error("Error Login Google:", error);
             throw error;

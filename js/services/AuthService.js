@@ -10,12 +10,46 @@ export const AuthService = {
     async init() {
         console.log("AuthService Initializing...");
         FirebaseService.init(); // Intentar inicializar si ya hay config
+
+        // Primero verificamos si venimos de un Redirect de Google Login (móviles/PWA)
+        try {
+            const redirectUser = await FirebaseService.checkAuthResult();
+            if (redirectUser) {
+                await this.handleSuccessfulLogin(redirectUser);
+                return this.user;
+            }
+        } catch (e) { console.error("Redirect Check Failed", e) }
+
         const savedUser = localStorage.getItem('app_user');
         if (savedUser) {
             this.user = JSON.parse(savedUser);
             // Auto login/refresh logic podria ir aqui en un futuro
         }
         return this.user;
+    },
+
+    async handleSuccessfulLogin(fbUser) {
+        const mappedUser = {
+            uid: fbUser.uid,
+            displayName: fbUser.displayName,
+            email: fbUser.email,
+            photoURL: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName)}`,
+            provider: 'google'
+        };
+        this.user = mappedUser;
+        localStorage.setItem('app_user', JSON.stringify(this.user));
+
+        // Al loguearte, descargar datos de la nube
+        const cloudData = await FirebaseService.pullFromCloud(this.user.uid);
+        if (cloudData) {
+            // Importamos el state global
+            const module = await import('../context/state.js');
+            module.State.importWholeState(cloudData);
+            window.showToast("Datos descargados de la Nube", "success");
+        } else {
+            window.showToast("Sesión iniciada exitosamente", "success");
+        }
+        window.router.navigate('dashboard');
     },
 
     async login(provider) {
@@ -25,26 +59,8 @@ export const AuthService = {
             try {
                 const fbUser = await FirebaseService.loginWithGoogle();
                 if (fbUser) {
-                    const mappedUser = {
-                        uid: fbUser.uid,
-                        displayName: fbUser.displayName,
-                        email: fbUser.email,
-                        photoURL: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName)}`,
-                        provider: 'google'
-                    };
-                    this.user = mappedUser;
-                    localStorage.setItem('app_user', JSON.stringify(this.user));
-
-                    // Al loguearte, descargar datos de la nube
-                    const cloudData = await FirebaseService.pullFromCloud(this.user.uid);
-                    if (cloudData) {
-                        // Importamos el state global
-                        import('../context/state.js').then(module => {
-                            module.State.importWholeState(cloudData);
-                            window.showToast("Datos descargados de la Nube", "success");
-                        });
-                    }
-
+                    // Solo para escritorio/Popups. En móviles la redirección se atrapa en init()
+                    await this.handleSuccessfulLogin(fbUser);
                     return this.user;
                 }
             } catch (error) {
