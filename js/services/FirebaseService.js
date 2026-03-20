@@ -7,14 +7,13 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-// TODO: El usuario (Emmanuel) reemplazará esto con su configuración real pronto.
 export const firebaseConfig = {
-    apiKey: localStorage.getItem('fb_api_key') || "PENDIENTE",
-    authDomain: localStorage.getItem('fb_auth_domain') || "PENDIENTE",
-    projectId: localStorage.getItem('fb_project_id') || "PENDIENTE",
-    storageBucket: "PENDIENTE",
-    messagingSenderId: "PENDIENTE",
-    appId: "PENDIENTE"
+    apiKey: "AIzaSyBp3veIYIYi4mrKBUEBZuoMYE2uCq-NHF4",
+    authDomain: "programaciondiscursos.firebaseapp.com",
+    projectId: "programaciondiscursos",
+    storageBucket: "programaciondiscursos.firebasestorage.app",
+    messagingSenderId: "261224265602",
+    appId: "1:261224265602:web:559120c91568f60aaa419b"
 };
 
 let app, auth, db;
