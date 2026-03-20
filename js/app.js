@@ -184,18 +184,31 @@ window.showUndo = (msg, callback) => {
     };
 };
 
-import { OneDriveService } from './services/OneDriveService.js';
+console.log("%c--- Programación Discursantes Pro v2.2.0 ---", "color: #6366f1; font-weight: bold; font-size: 1.2rem;");
 
-// Initialize OneDrive connection if account exists
-OneDriveService.init();
+// Global error handler for mobile debugging
+window.onerror = function(msg, url, line, col, error) {
+    console.error("Global Error Caught:", msg, "at", url, ":", line);
+    // window.showToast("Error detectado: " + msg, "danger");
+    return false;
+};
 
 // Start the app
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+const startApp = async () => {
+    try {
+        console.log("Checking Auth...");
+        await AuthService.init();
         new Router();
-    });
+    } catch (e) {
+        console.error("App Start Failed:", e);
+        new Router(); // Fallback to local mode
+    }
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startApp);
 } else {
-    new Router();
+    startApp();
 }
 
 // Safe function to clear only cache and service worker

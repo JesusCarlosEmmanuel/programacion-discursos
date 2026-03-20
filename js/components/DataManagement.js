@@ -174,14 +174,14 @@ export const DataManagement = {
         if (!user) {
             target.innerHTML = `
                 <div class="cloud-provider-selector" style="display:grid; grid-template-columns:1fr; gap:10px">
-                    <button class="btn btn-secondary" onclick="window.router.navigate('login')" style="justify-content:center; padding:15px; background: rgba(0,164,239,0.1); border-color:#00a4ef;">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" width="20"> Conectar OneDrive (Excel)
+                    <button class="btn btn-primary" onclick="window.router.navigate('login')" style="justify-content:center; padding:15px; background: var(--primary); border-color:var(--primary);">
+                        <i data-lucide="cloud" width="20"></i> Iniciar Sesión con Google (Sincronización Nube)
                     </button>
-                    <button class="btn btn-secondary" onclick="window.router.navigate('login')" style="justify-content:center; padding:15px; opacity:0.6">
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Conectar Google Drive (Próximamente)
-                    </button>
+                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #94a3b8;">
+                       <i data-lucide="shield-check" style="width:14px"></i> Tus datos se guardarán automáticamente en tu cuenta personal de Google/Firebase.
+                    </div>
                 </div>
-                <p style="font-size:0.85rem; color:#94a3b8;"><i data-lucide="info" style="width:14px"></i> Actualmente operando en <b>Modo Local</b>. Tus datos solo viven en este dispositivo.</p>
+                <p style="font-size:0.85rem; color:#94a3b8; margin-top: 10px;"><i data-lucide="info" style="width:14px"></i> Actualmente operando en <b>Modo Local</b>. Tus datos solo viven en este navegador.</p>
             `;
         } else {
             const data = JSON.parse(user);
@@ -191,17 +191,17 @@ export const DataManagement = {
                         <div style="display:flex; align-items:center; gap:10px">
                             <i data-lucide="check-circle" style="color:#22c55e"></i>
                             <div>
-                                <h4 style="margin:0">${data.provider === 'microsoft' ? 'OneDrive Activo' : 'Google Drive Activo'}</h4>
+                                <h4 style="margin:0">Sincronización Activa</h4>
                                 <span style="font-size:0.8rem; color:#94a3b8">${data.email}</span>
                             </div>
                         </div>
-                        <button class="btn btn-danger btn-small" onclick="AuthService.logout()">Desconectar</button>
+                        <button class="btn btn-danger btn-small" onclick="AuthService.logout()">Cerrar Sesión</button>
                     </div>
                     
                     <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:1rem; display:flex; flex-direction:column; gap:8px">
                         <div style="display:flex; justify-content:space-between; font-size:0.85rem">
-                            <span style="color:#94a3b8">Archivo en Nube:</span>
-                            <span style="color:white">ProgramacionDiscursos_Cloud.xlsx</span>
+                            <span style="color:#94a3b8">Servidor:</span>
+                            <span style="color:white">Google Firebase (Multi-dispositivo)</span>
                         </div>
                         <div style="display:flex; justify-content:space-between; font-size:0.85rem">
                             <span style="color:#94a3b8">Última Sincronización:</span>
@@ -214,7 +214,7 @@ export const DataManagement = {
                     </button>
                 </div>
                 <p style="font-size:0.85rem; color:#94a3b8; font-style:italic">
-                    <i data-lucide="shield-check" style="width:14px"></i> Seguridad: La aplicación solo crea hojas especiales (_APP_) y no toca tus datos manuales existentes en el Excel.
+                    <i data-lucide="shield-check" style="width:14px"></i> Los datos se guardan de forma encriptada y personal.
                 </p>
             `;
         }

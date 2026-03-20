@@ -1,4 +1,4 @@
-const CACHE_NAME = 'speaker-scheduler-v6.3';
+const CACHE_NAME = 'speaker-scheduler-v6.5';
 const ASSETS = [
     './',
     './index.html',
@@ -14,6 +14,8 @@ const ASSETS = [
     './js/context/state.js',
     './js/utils/phone.js',
     './js/utils/csv.js',
+    './js/services/AuthService.js',
+    './js/services/FirebaseService.js',
     './js/services/EventService.js',
     './js/services/NotificationService.js',
     './js/components/Dashboard.js',
@@ -24,48 +26,57 @@ const ASSETS = [
     './js/components/DataManagement.js',
     './js/components/Masters.js',
     './js/components/Calendar.js',
-    'https://unpkg.com/lucide@latest',
-    'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
-    'https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js'
+    './js/components/Login.js'
 ];
 
-// Install Event
+// URLs that should ALWAYS hit the network and never be cached or intercepted
+const EXCLUDED_DOMAINS = [
+    'www.gstatic.com',
+    'firebasestorage.googleapis.com',
+    'identitytoolkit.googleapis.com',
+    'securetoken.googleapis.com',
+    'firebaseapp.com',
+    'googleapis.com',
+    'google.com'
+];
+
 self.addEventListener('install', (event) => {
+    self.skipWaiting();
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS);
-        })
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
     );
 });
 
-// Activate Event
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
             return Promise.all(
-                keys.filter((key) => key !== CACHE_NAME)
-                    .map((key) => caches.delete(key))
+                keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
             );
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
-// Fetch Event: Stale-While-Revalidate Strategy
 self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.match(event.request).then((cachedResponse) => {
-                const fetchPromise = fetch(event.request).then((networkResponse) => {
-                    if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-                        cache.put(event.request, networkResponse.clone());
-                    }
-                    return networkResponse;
-                }).catch(() => {
-                    // Fail silently, we already have cached response if available
-                });
+    const url = new URL(event.request.url);
+    
+    // Bypass service worker for Firebase/Google auth domains
+    if (EXCLUDED_DOMAINS.some(domain => url.hostname.includes(domain))) {
+        return; // Let the browser handle the network request naturally
+    }
 
-                return cachedResponse || fetchPromise;
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse;
+            return fetch(event.request).then((networkResponse) => {
+                // Cache a copy of the new resource if valid
+                if (networkResponse && networkResponse.status === 200) {
+                    const responseClone = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseClone);
+                    });
+                }
+                return networkResponse;
             });
         })
     );

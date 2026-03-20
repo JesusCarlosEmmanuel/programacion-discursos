@@ -3,6 +3,10 @@
   <h1>Programación Discursantes Pro (PWA) 🎙️</h1>
   <p><b>Plataforma de Gestión y Programación de Oradores con Arquitectura Local-First y Sincronización en la Nube</b></p>
 
+  <div style="margin: 20px 0;">
+    <a href="https://jesuscarlosemmanuel.github.io/programacion-discursos/" style="background: #6366f1; color: white; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);">🚀 PROBAR APLICACIÓN EN VIVO</a>
+  </div>
+
   <p>
     <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
     <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />

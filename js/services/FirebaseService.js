@@ -1,8 +1,3 @@
-/**
- * FirebaseService.js
- * Handles Authentication and Firestore Database Sync.
- */
-
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
@@ -19,107 +14,129 @@ export const firebaseConfig = {
 let app, auth, db;
 let isInitialized = false;
 
+// Logger helper to help Emmanuel see what's going on in mobile
+const log = (msg, obj = '') => {
+  console.log(`[Firebase] ${msg}`, obj);
+  // Optional: You could show these in a specific UI debug panel
+};
+
 export const FirebaseService = {
     init() {
-        if (firebaseConfig.apiKey === "PENDIENTE") {
-            console.log("Firebase no configurado aún. Operando en Modo Local estricto.");
-            return false;
-        }
+        if (isInitialized) return true;
         try {
-            if (!app) {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                isInitialized = true;
-            }
+            log("Initializing Firebase...");
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            isInitialized = true;
+            
+            // Monitor session in real time
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    log("User detected by Firebase Core", user.email);
+                    // Sync local state profile if needed
+                    localStorage.setItem('fb_user_active', 'true');
+                } else {
+                    log("No active Firebase session");
+                    localStorage.removeItem('fb_user_active');
+                }
+            });
+
             return true;
         } catch (e) {
-            console.error("Error al inicializar Firebase:", e);
+            log("Initialization Error", e);
             return false;
         }
     },
 
     async checkAuthResult() {
-        if (!isInitialized) return null;
+        this.init();
         try {
+            log("Checking Redirect Result...");
             const result = await getRedirectResult(auth);
             if (result && result.user) {
+                log("Redirect Result Success", result.user.email);
                 return result.user;
             }
+            log("No redirect result found");
         } catch (error) {
-            console.error("Error en Redirect Result:", error);
+            log("Error in Redirect Result", error.message);
+            // Si el error es sobre dominios no autorizados, esto aparecerá en consola
+            if (error.code === 'auth/unauthorized-domain') {
+                window.showToast("Error: Dominio no autorizado en Firebase. Añade github.io a la consola.", "danger");
+            }
         }
         return null;
     },
 
     async loginWithGoogle() {
         if (!this.init()) {
-            window.showToast("Firebase no está configurado.", "warning");
+            window.showToast("Error al inicializar servidor.", "danger");
             return null;
         }
         try {
+            log("Starting Google Login...");
             const provider = new GoogleAuthProvider();
-            // Detectar si estamos en un PWA o móvil para usar Redirect en lugar de Popup
-            const isMobileOrPwa = window.innerWidth < 768 || window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+            
+            // Forzamos el prompt de selección de cuenta siempre para evitar "congelamientos" por auto-login fallido
+            provider.setCustomParameters({ prompt: 'select_account' });
 
-            if (isMobileOrPwa) {
-                window.showToast("Redirigiendo a Google...", "info");
+            const isMobile = window.innerWidth < 768 || /Android|iPhone/i.test(navigator.userAgent);
+            const isPwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+            if (isMobile || isPwa) {
+                log("Executing Redirect Auth (Mobile/PWA)");
+                window.showToast("Conectando con Google...", "info");
+                // Importante: No retornamos nada, dejamos que la página se vaya
                 await signInWithRedirect(auth, provider);
-                return null; // El hilo muere aquí y la página recarga
             } else {
+                log("Executing Popup Auth (Desktop)");
                 const result = await signInWithPopup(auth, provider);
+                log("Popup Login Success", result.user.email);
                 return result.user;
             }
         } catch (error) {
-            console.error("Error Login Google:", error);
+            log("Login Error", error);
+            window.showToast(`Error: ${error.message}`, "danger");
             throw error;
         }
     },
 
     async logout() {
         if (auth) {
+            log("Logging out...");
             await signOut(auth);
         }
     },
 
-    /**
-     * Sincroniza todo el State local hacia Firestore bajo el UID del usuario
-     */
     async syncToCloud(uid, stateData) {
         if (!isInitialized || !uid) return;
         try {
             const userRef = doc(db, "users", uid);
-            // Empaquetar todo el estado en un solo documento
             await setDoc(userRef, {
                 data: JSON.stringify(stateData),
                 lastSync: new Date().toISOString()
             });
-            console.log("Datos sincronizados en Firebase exitosamente.");
-            localStorage.setItem('last_cloud_sync', new Date().toLocaleString());
+            log("Cloud Sync Success");
         } catch (e) {
-            console.error("Error subiendo datos a Firebase:", e);
+            log("Cloud Sync Error", e);
         }
     },
 
-    /**
-     * Descarga los datos de Firestore al State local (Ocurre tras el login exitoso)
-     */
     async pullFromCloud(uid) {
         if (!isInitialized || !uid) return null;
         try {
+            log("Pulling from cloud...");
             const userRef = doc(db, "users", uid);
             const docSnap = await getDoc(userRef);
-
             if (docSnap.exists()) {
-                const dataStr = docSnap.data().data;
-                console.log("Datos descargados de Firebase exitosamente.");
-                return JSON.parse(dataStr);
-            } else {
-                console.log("No hay datos previos en la nube para este usuario. Es una cuenta nueva.");
-                return null;
+                log("Pull Success");
+                return JSON.parse(docSnap.data().data);
             }
+            log("No data found in cloud for UID", uid);
+            return null;
         } catch (e) {
-            console.error("Error descargando datos de Firebase:", e);
+            log("Pull Error", e);
             return null;
         }
     }
