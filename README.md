@@ -66,12 +66,13 @@ Módulo `NotificationService` capaz de compilar payloads dinámicos y convertirl
 
 ## 👨‍💻 Autor y Desarrollador
 
-**Jesús Carlos Emmanuel Jiménez**
+**Jesús Emmanuel Jiménez Carlos**
 *Software Engineer | Full-Stack Developer*
 
 Proactivo y orientado a resultados, especializado en la creación de herramientas digitales que resuelven problemas reales del entorno B2B (Business-to-Business) y B2C. Pasión por la optimización de código, escalabilidad y arquitecturas sin servidor (Serverless).
 
-🔗 **Contacto:** [tu-correo-o-linkedin@ejemplo.com] *(Añade aquí tus redes profesionales)*
+🔗 **Contacto:** [jesusjimenez.computerengineer@gmail.com] 
+*(www.linkedin.com/in/jesús-emmanuel-jiménez-carlos-358a20170)*
 
 ---
 *Si eres un reclutador o cliente, te invito a probar la versión en vivo o a revisar el código fuente. Este proyecto refleja estándares de organización, modularización y solución de problemas arquitectónicos aplicables a grandes plataformas empresariales.*
