@@ -1,38 +1,77 @@
-# Programación Discursantes (Speaker Scheduler PWA) 🎙️
+<div align="center">
+  <img src="icons/icon-512x512.png" alt="Logo" width="120" height="120">
+  <h1>Programación Discursantes Pro (PWA) 🎙️</h1>
+  <p><b>Plataforma de Gestión y Programación de Oradores con Arquitectura Local-First y Sincronización en la Nube</b></p>
 
-**Programación Discursantes** es una poderosa *Progressive Web App* (PWA) diseñada profesionalmente para gestionar, visualizar y automatizar la programación de discursos bíblicos entre congregaciones ("Vienen" y "Van").
-
-Combina un diseño moderno con *Glassmorphism*, modo oscuro inmersivo y una arquitectura descentralizada en el navegador (Local Storage) para ofrecer velocidad extrema y disponibilidad 100% offline.
-
-## 🌟 Características Principales
-
-- **Gestión Bi-Direccional:** Control avanzado de oradores asignados a la congregación local (Vienen) y aquellos enviados a apoyar otras congregaciones (Van).
-- **Directorio de Maestros:** Base de datos relacional de congregaciones, direcciones, horarios de reuniones y contactos de coordinadores.
-- **Autocompletado Inteligente:** Búsqueda en tiempo real mediante *Datalist* y autocompletado de domicilios, horarios y días.
-- **Borradores Automáticos:** Los formularios guardan temporalmente tu progreso si haces clic fuera de la ventana por accidente.
-- **Notificaciones WhatsApp Multi-Objetivo:** Envío de notificaciones y recordatorios a 10 días, pre-formateadas directamente a WhatsApp para Discursantes, Coordinadores Locales y Coordinadores Anfitriones/Origen.
-- **Informes Dinámicos:** Genera reportes tabulares en imagen, texto plano y **PDF (Landscape)** para enviar el cronograma mensual a supervisores por WhatsApp.
-- **Prevención de Errores Avanzada:** El sistema alerta proactivamente si se asigna un bosquejo duplicado (3 meses), si el orador ya tiene otra salida en el mismo mes, o si hay fines de semana sin cubrir.
-- **Compartición de Catálogo:** Exporta rápidamente tu lista de oradores y temas disponibles directamente a WhatsApp para coordinar con otras congregaciones.
-- **Calendario Visual Mensual:** Vista rápida en bloques mensuales (verde = asignado, rojo = vacío). 
-
-## 📲 Walkthrough y Uso
-
-1. **Instalación PWA**: Abre la URL en Chrome, Safari o tu dispositivo móvil y selecciona "Instalar" o "Agregar a Pantalla de Inicio".
-2. **Ajustes y Mi Congregación**: Ve al apartado de **Ajustes** y configura el nombre, domicilio y horario de "Mi Congregación". Esto sirve como origen de datos para las notificaciones.
-3. **Poblando el Directorio**: Ingresa al apartado **Congr.** para registrar las congregaciones. Puedes importar via CSV desde Excel para mayor rapidez.
-4. **Agendando Discursos**: Entra a **Van** (Nuestros discursantes salientes) o **Vienen** (Discursantes invitados visitantes) y haz click en "Nuevo Evento".
-   - Utiliza la lupa del buscador para encontrar la congregación. Sus datos (dirección, horario) se llenarán automáticamente.
-   - El sistema detectará si hay duplicados recientes.
-5. **Notificando y Recordando**: Después de crear el evento, utiliza los **botones de Notificar (Iconos)** en la cabecera de la ventana para enviar un WhatsApp personalizado al discursante o al respectivo coordinador.
-6. **Reportes de Supervisor**: Accede a **Informes**, selecciona el rango de fecha (ej. el próximo mes) y el tipo (Vienen/Van). Dale click a `WhatsApp` y el resumen tabular se abrirá listo para mandarse por la app de mensajería.
-
-## 🛠 Entorno de Desarrollo
-
-- **HTML5 & CSS3 Vanilla** (Sin frameworks complejos, optimizado para carga < 1s).
-- **ES6 JavaScript Modular**: Con `router.js` estilo SPA y Arquitectura de Contexto (`state.js`).
-- **Service Worker (`sw.js`)**: Caché robusta para permitir el uso totalmente fuera de línea y funcionamiento rápido incluso en redes lentas.
-- **Persistencia de Datos**: Uso extensivo de `localStorage` para salvaguardar la privacidad y el uso de la app sin backend de terceros.
+  <p>
+    <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
+    <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
+    <img src="https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white" alt="PWA" />
+    <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3" />
+  </p>
+</div>
 
 ---
-*Desarrollado para la gestión simplificada, enfocada en la eficiencia y sin distracciones visuales.*
+
+## 🚀 Sobre el Proyecto
+
+**Programación Discursantes Pro** es una aplicación multiplataforma progresiva (PWA) diseñada para resolver la logística compleja y programación multidireccional de oradores en organizaciones. 
+
+El sistema fue desarrollado desde cero con un enfoque en **Rendimiento Extremo (Zero-bundle), Disponibilidad Offline (Local-First)** y **Experiencia de Usuario (UX/UI)** moderna basada en *Glassmorphism* y Neumorfismo.
+
+Esta plataforma no solo gestiona bases de datos organizacionales e itinerarios, sino que integra motores de reconciliación de datos (OCR), sincronización en tiempo real (Firebase Firestore) y pasarelas de comunicación directa (API de WhatsApp).
+
+## 🧠 Arquitectura Técnica e Innovación
+
+El proyecto se construyó sin utilizar frameworks pesados (como React o Angular) para demostrar un dominio profundo del DOM, APIs del navegador y patrones de diseño en Vanilla JavaScript (ES6+).
+
+### 1. Sistema "Local-First" + "Cloud Sync" (Base de Datos Dual)
+La aplicación fue diseñada para funcionar al **100% sin internet**. Todos los datos se gestionan a través de una capa de Contexto (`State.js`) inyectada en IndexedDB/LocalStorage.
+- **Modo Seguro:** Cuando un usuario autenticado está en línea, un Web Worker silencioso sincroniza las mutaciones de estado hacia una arquitectura **Serverless (Google Firebase Firestore)** mediante un algoritmo de *Debounce*, garantizando que los datos persistan en múltiples dispositivos de forma instantánea.
+
+### 2. Motor OCR Integrado (Inteligencia Artificial)
+Implementación de procesamiento de imágenes y lectura de documentos PDF del lado del cliente utilizando **Tesseract.js** y **PDF.js**. 
+- Permite la ingesta masiva de datos mediante el escaneo de itinerarios impresos. Un parser inteligente propio (`parseEngine`) extrae fechas, nombres, horarios y congregaciones mediante Expresiones Regulares (RegEx) avanzadas.
+
+### 3. Progressive Web App (PWA) Nativa
+- **Service Workers (`sw.js`):** Interceptores de red (Estrategia *Cache-First* y *Network-Fallback*) que permiten la instalación de la aplicación como software nativo en iOS, Android, Windows y macOS.
+- **Manifest.json:** Configuración *Standalone* precisa.
+
+### 4. Automatización de Comunicaciones
+Módulo `NotificationService` capaz de compilar payloads dinámicos y convertirlos en Deep-Links de WhatsApp. Permite notificar asíncronamente a oradores u otras áreas sobre confirmaciones, cancelaciones y alertas (ej. *Gap Alerts* a 10 días).
+
+---
+
+## 🌟 Características Destacadas
+
+*   ⚡ **Single Page Application (SPA):** Enrutador (`router.js`) personalizado, transiciones suaves y cero recargas de página.
+*   🎨 **UI/UX Premium:** Interfaz de usuario "Modo Oscuro" con tarjetas de cristal (*Glassmorphism*), diseño responsivo (CSS Grid/Flexbox) adaptativo desde dispositivos móviles hasta pantallas de monitorización grandes.
+*   🔒 **Autenticación Multi-tenant:** Integración OAuth 2.0 mediante Google Firebase. Reglas estrictas de Firestore impiden que los usuarios lean o escriban en los nodos de otros inquilinos (Seguridad granular de nivel comercial).
+*   📊 **Generación de Reportes Dinámicos:** Exportación asíncrona a nivel cliente en formatos PDF, CSV, Excel (SheetJS) y JSON puros para portabilidad de datos (*Data Portability*).
+*   🛡️ **Sistema Forense de Errores:** Lógica para prevenir colisiones de programación (oradores duplicados en el mismo mes), protección de pérdida de estado (borradores temporales) e interfaz de limpieza de caché (*Hard Reset*).
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Categoría | Tecnología Utilizada |
+| :--- | :--- |
+| **Frontend / Lógica** | JavaScript (ES6+ Variables, Promesas, Async/Await, Módulos) |
+| **Estilos & Diseño** | CSS3 Vanilla (Variables Root, Glassmorphism, Interacciones Fluidas) |
+| **Backend / DB** | Firebase Authentication (OAuth), Cloud Firestore (NoSQL) |
+| **Herramientas & API** | Tesseract.js (OCR), PDF.js, SheetJS, html2canvas, jsPDF, Lucide Icons |
+| **Deployment** | GitHub Pages (CI/CD nativo), Firebase Security Rules |
+
+---
+
+## 👨‍💻 Autor y Desarrollador
+
+**Jesús Carlos Emmanuel Jiménez**
+*Software Engineer | Full-Stack Developer*
+
+Proactivo y orientado a resultados, especializado en la creación de herramientas digitales que resuelven problemas reales del entorno B2B (Business-to-Business) y B2C. Pasión por la optimización de código, escalabilidad y arquitecturas sin servidor (Serverless).
+
+🔗 **Contacto:** [tu-correo-o-linkedin@ejemplo.com] *(Añade aquí tus redes profesionales)*
+
+---
+*Si eres un reclutador o cliente, te invito a probar la versión en vivo o a revisar el código fuente. Este proyecto refleja estándares de organización, modularización y solución de problemas arquitectónicos aplicables a grandes plataformas empresariales.*
