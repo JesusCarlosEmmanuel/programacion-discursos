@@ -31,10 +31,10 @@ export const AuthService = {
     async handleSuccessfulLogin(fbUser) {
         const mappedUser = {
             uid: fbUser.uid,
-            displayName: fbUser.displayName,
+            displayName: fbUser.displayName || fbUser.email.split('@')[0],
             email: fbUser.email,
-            photoURL: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName)}`,
-            provider: 'google'
+            photoURL: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName || fbUser.email)}&background=random`,
+            provider: fbUser.providerId || 'firebase'
         };
         this.user = mappedUser;
         localStorage.setItem('app_user', JSON.stringify(this.user));
@@ -54,33 +54,37 @@ export const AuthService = {
 
     async login(provider, credentials = null) {
         console.log(`Logging in with ${provider}...`);
-
-        if (provider === 'google') {
-            try {
-                const fbUser = await FirebaseService.loginWithGoogle();
-                if (fbUser) {
-                    await this.handleSuccessfulLogin(fbUser);
-                    return this.user;
-                }
-                return null;
-            } catch (error) {
-                console.error("Firebase Auth Falló:", error);
-                throw error;
+        try {
+            let fbUser;
+            if (['google', 'facebook', 'microsoft'].includes(provider)) {
+                fbUser = await FirebaseService.loginWithProvider(provider);
+            } else if (provider === 'email' && credentials) {
+                fbUser = await FirebaseService.loginWithEmail(credentials.email, credentials.password);
             }
-        }
 
-        if (provider === 'email') {
-            // Placeholder for Firebase Email Auth
-            window.showToast("El registro por correo estará disponible pronto.", "info");
+            if (fbUser) {
+                await this.handleSuccessfulLogin(fbUser);
+                return this.user;
+            }
             return null;
+        } catch (error) {
+            console.error(`Error de login con ${provider}:`, error);
+            throw error;
         }
+    },
 
-        if (['microsoft', 'facebook', 'instagram'].includes(provider)) {
-            window.showToast(`El inicio de sesión con ${provider} estará disponible próximamente. Por favor usa Google.`, "info");
+    async register(email, password, name) {
+        try {
+            const fbUser = await FirebaseService.registerWithEmail(email, password, name);
+            if (fbUser) {
+                await this.handleSuccessfulLogin(fbUser);
+                return this.user;
+            }
             return null;
+        } catch (error) {
+            console.error("Error de registro:", error);
+            throw error;
         }
-
-        return null;
     },
 
     async logout() {

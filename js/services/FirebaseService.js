@@ -1,5 +1,18 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { 
+    getAuth, 
+    signInWithPopup, 
+    signInWithRedirect, 
+    getRedirectResult, 
+    GoogleAuthProvider, 
+    FacebookAuthProvider,
+    OAuthProvider,
+    signOut, 
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    updateProfile
+} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 export const firebaseConfig = {
@@ -17,7 +30,6 @@ let isInitialized = false;
 // Logger helper to help Emmanuel see what's going on in mobile
 const log = (msg, obj = '') => {
   console.log(`[Firebase] ${msg}`, obj);
-  // Optional: You could show these in a specific UI debug panel
 };
 
 export const FirebaseService = {
@@ -34,7 +46,6 @@ export const FirebaseService = {
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     log("User detected by Firebase Core", user.email);
-                    // Sync local state profile if needed
                     localStorage.setItem('fb_user_active', 'true');
                 } else {
                     log("No active Firebase session");
@@ -61,43 +72,66 @@ export const FirebaseService = {
             log("No redirect result found");
         } catch (error) {
             log("Error in Redirect Result", error.message);
-            // Si el error es sobre dominios no autorizados, esto aparecerá en consola
             if (error.code === 'auth/unauthorized-domain') {
-                window.showToast("Error: Dominio no autorizado en Firebase. Añade github.io a la consola.", "danger");
+                window.showToast("Error: Dominio no autorizado en Firebase.", "danger");
             }
         }
         return null;
     },
 
-    async loginWithGoogle() {
-        if (!this.init()) {
-            window.showToast("Error al inicializar servidor.", "danger");
-            return null;
-        }
+    async loginWithProvider(providerName) {
+        if (!this.init()) return null;
         try {
-            log("Starting Google Login...");
-            const provider = new GoogleAuthProvider();
-            
-            // Forzamos el prompt de selección de cuenta siempre para evitar "congelamientos" por auto-login fallido
+            let provider;
+            if (providerName === 'google') provider = new GoogleAuthProvider();
+            else if (providerName === 'facebook') provider = new FacebookAuthProvider();
+            else if (providerName === 'microsoft') provider = new OAuthProvider('microsoft.com');
+            else throw new Error("Proveedor no soportado");
+
             provider.setCustomParameters({ prompt: 'select_account' });
 
-            const isMobile = window.innerWidth < 768 || /Android|iPhone/i.test(navigator.userAgent);
-            const isPwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+            const isMobileOrPwa = window.innerWidth < 768 || window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 
-            if (isMobile || isPwa) {
-                log("Executing Redirect Auth (Mobile/PWA)");
-                window.showToast("Conectando con Google...", "info");
-                // Importante: No retornamos nada, dejamos que la página se vaya
+            if (isMobileOrPwa) {
+                log(`Executing Redirect Auth for ${providerName}`);
+                window.showToast(`Conectando con ${providerName}...`, "info");
                 await signInWithRedirect(auth, provider);
+                return null; // Redirecting
             } else {
-                log("Executing Popup Auth (Desktop)");
+                log(`Executing Popup Auth for ${providerName}`);
                 const result = await signInWithPopup(auth, provider);
-                log("Popup Login Success", result.user.email);
                 return result.user;
             }
         } catch (error) {
-            log("Login Error", error);
+            log("Provider Login Error", error);
             window.showToast(`Error: ${error.message}`, "danger");
+            throw error;
+        }
+    },
+
+    async registerWithEmail(email, password, displayName) {
+        if (!this.init()) return null;
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            if (displayName) {
+                await updateProfile(userCredential.user, { displayName });
+            }
+            return userCredential.user;
+        } catch (error) {
+            log("Register Error", error);
+            window.showToast(`Error de registro: ${error.code}`, "danger");
+            throw error;
+        }
+    },
+
+    async loginWithEmail(email, password) {
+        if (!this.init()) return null;
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            return userCredential.user;
+        } catch (error) {
+            log("Email Login Error", error);
+            window.showToast(`Error: Credenciales inválidas`, "danger");
             throw error;
         }
     },
