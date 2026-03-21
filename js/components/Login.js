@@ -131,18 +131,9 @@ export const Login = {
                         <div style="height: 1px; background: #e2e8f0; flex: 1;"></div>
                     </div>
 
-                    <div class="social-auth" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <button class="social-btn" onclick="window.Login.handleSocial('google')">
-                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> Google
-                        </button>
-                        <button class="social-btn" onclick="window.Login.handleSocial('microsoft')">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" width="18"> Outlook
-                        </button>
-                        <button class="social-btn" onclick="window.Login.handleSocial('facebook')">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg" width="18"> Facebook
-                        </button>
-                        <button class="social-btn" onclick="window.Login.handleSocial('instagram')">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" width="18"> Instagram
+                    <div class="social-auth" style="display: flex; justify-content: center; gap: 10px;">
+                        <button class="social-btn" onclick="window.Login.handleSocial('google')" style="width: 100%; max-width: 250px;">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> Continuar con Google
                         </button>
                     </div>
 
