@@ -2,11 +2,64 @@ export const Login = {
     mode: 'login', // 'login' or 'register'
 
     render() {
-        if (window.AuthService && window.AuthService.isAuthenticated()) {
-            setTimeout(() => window.router.navigate('dashboard'), 0);
-            return document.createElement('div');
+        const user = window.AuthService ? window.AuthService.user : null;
+
+        // --- PROFILE VIEW (IF LOGGED IN) ---
+        if (user) {
+            const container = document.createElement('div');
+            container.className = 'profile-view view-container';
+            container.innerHTML = `
+                <div class="view-header">
+                    <h2>Mi Cuenta</h2>
+                </div>
+                
+                <div class="card profile-card" style="text-align: center; padding: 3rem 2rem;">
+                    <div style="position: relative; display: inline-block; margin-bottom: 1.5rem;">
+                        <img src="${user.photoURL}" alt="Avatar" style="width: 120px; height: 120px; border-radius: 60px; border: 4px solid var(--primary-glow); object-fit: cover;">
+                        <div style="position: absolute; bottom: 5px; right: 5px; background: white; border-radius: 50%; padding: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                            <img src="${this.getProviderIcon(user.provider)}" width="20">
+                        </div>
+                    </div>
+                    
+                    <h3 style="font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem;">${user.displayName}</h3>
+                    <p style="color: var(--text-dim); margin-bottom: 2rem;">${user.email}</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; border-top: 1px solid var(--card-border); padding-top: 2rem;">
+                        <div style="text-align: left;">
+                            <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Estado de Nube</label>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                                <div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></div>
+                                <span style="font-weight: 600; font-size: 0.9rem;">Sincronizado</span>
+                            </div>
+                        </div>
+                        <div style="text-align: left;">
+                            <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Proveedor</label>
+                            <p style="font-weight: 600; font-size: 0.9rem; margin-top: 4px; text-transform: capitalize;">${user.provider}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <button class="btn btn-secondary" onclick="window.router.navigate('dashboard')" style="width: 100%;">
+                            <i data-lucide="layout-dashboard"></i> Ir al Panel
+                        </button>
+                        <button class="btn btn-danger" onclick="window.AuthService.logout()" style="width: 100%;">
+                            <i data-lucide="log-out"></i> Cerrar Sesión
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 1rem; padding: 1.25rem; background: #f8fafc; border-style: dashed;">
+                    <p style="font-size: 0.85rem; color: var(--text-dim); line-height: 1.5;">
+                        <i data-lucide="shield-check" style="width: 16px; vertical-align: middle; color: var(--primary);"></i>
+                        Tu sesión está protegida por Firebase. Tus datos de discursos se guardan automáticamente en tu espacio privado cada vez que haces un cambio.
+                    </p>
+                </div>
+            `;
+            if (window.lucide) window.lucide.createIcons();
+            return container;
         }
 
+        // --- LOGIN / REGISTER VIEW (IF NOT LOGGED IN) ---
         const container = document.createElement('div');
         container.className = 'login-landing';
         container.style.cssText = `
@@ -15,10 +68,7 @@ export const Login = {
             background: #f8fafc;
             color: #0f172a;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 1000;
+            top: 0; left: 0; width: 100%; z-index: 1000;
         `;
 
         const isLogin = this.mode === 'login';
@@ -127,6 +177,7 @@ export const Login = {
                     transition: all 0.2s;
                 }
                 .social-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+                .profile-card { max-width: 500px; margin: 0 auto; }
             </style>
         `;
 
@@ -143,6 +194,13 @@ export const Login = {
 
         if (window.lucide) window.lucide.createIcons();
         return container;
+    },
+
+    getProviderIcon(provider) {
+        if (provider.includes('google')) return 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg';
+        if (provider.includes('facebook')) return 'https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg';
+        if (provider.includes('microsoft')) return 'https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg';
+        return 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/mail.svg';
     },
 
     toggleMode() {
