@@ -52,25 +52,31 @@ export const AuthService = {
         window.router.navigate('dashboard');
     },
 
-    async login(provider) {
+    async login(provider, credentials = null) {
         console.log(`Logging in with ${provider}...`);
 
         if (provider === 'google') {
             try {
                 const fbUser = await FirebaseService.loginWithGoogle();
                 if (fbUser) {
-                    // Solo para escritorio/Popups. En móviles la redirección se atrapa en init()
                     await this.handleSuccessfulLogin(fbUser);
                     return this.user;
                 }
+                return null;
             } catch (error) {
                 console.error("Firebase Auth Falló:", error);
                 throw error;
             }
         }
 
-        if (provider === 'microsoft' || provider === 'github' || provider === 'facebook') {
-            window.showToast("Este método estará disponible pronto. Por favor usa 'Continuar con Google'.", "info");
+        if (provider === 'email') {
+            // Placeholder for Firebase Email Auth
+            window.showToast("El registro por correo estará disponible pronto.", "info");
+            return null;
+        }
+
+        if (['microsoft', 'facebook', 'instagram'].includes(provider)) {
+            window.showToast(`El inicio de sesión con ${provider} estará disponible próximamente. Por favor usa Google.`, "info");
             return null;
         }
 
@@ -80,11 +86,13 @@ export const AuthService = {
     async logout() {
         this.user = null;
         localStorage.removeItem('app_user');
+        localStorage.removeItem('fb_user_active');
         await FirebaseService.logout();
+        window.location.hash = 'login';
         window.location.reload();
     },
 
     isAuthenticated() {
-        return !!this.user;
+        return !!this.user || !!localStorage.getItem('app_user');
     }
 };

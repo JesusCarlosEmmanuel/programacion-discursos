@@ -1,220 +1,85 @@
-/* =========================================
-   Events CSS (Incoming / Outgoing)
-   ========================================= */
-
-.event-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-/* ---- Event Card ---- */
-.event-card {
+.event-card, .speaker-card {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.9rem 1rem;
-    border-left: 3px solid var(--primary);
+    gap: 1rem;
+    padding: 1.25rem;
+    background: #ffffff;
+    border: 1px solid var(--card-border);
+    margin-bottom: 0.75rem;
+    border-radius: 12px;
     transition: var(--transition);
-    position: relative;
-    overflow: hidden;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.event-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, rgba(99, 102, 241, 0.04), transparent 60%);
-    pointer-events: none;
+.event-card:hover, .speaker-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.event-card.outgoing-card {
-    border-left-color: var(--primary);
-}
+.event-card.outgoing-card { border-left: 4px solid var(--primary); }
+.event-card.incoming-card { border-left: 4px solid var(--accent); }
 
-.event-card.incoming-card {
-    border-left-color: var(--secondary);
-}
-
-.event-card.selected {
-    border-left-color: var(--success);
-    background: rgba(52, 211, 153, 0.04);
-}
-
-.event-card.past-event {
-    opacity: 0.5;
-}
-
-/* ---- Selection Checkbox ---- */
-.card-selection {
-    flex-shrink: 0;
-}
-
-.bulk-check {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--primary);
-    cursor: pointer;
-}
-
-/* ---- Event Info Area ---- */
-.event-info {
-    flex: 1;
-    display: flex;
-    gap: 0.85rem;
-    align-items: center;
-    cursor: pointer;
-    overflow: hidden;
-    min-width: 0;
-}
-
-/* ---- Date Badge ---- */
 .event-date-badge {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm);
-    padding: 0.5rem 0.6rem;
+    background: #f8fafc;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 0.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 54px;
-    flex-shrink: 0;
+    min-width: 60px;
 }
 
 .event-date-badge .day {
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    letter-spacing: 0.8px;
+    font-size: 0.65rem;
     font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
 }
 
 .event-date-badge .date {
     font-size: 1.5rem;
-    font-weight: 900;
-    color: var(--primary);
-    line-height: 1.1;
-}
-
-.outgoing-card .event-date-badge .date {
-    color: var(--primary);
-}
-
-.incoming-card .event-date-badge .date {
-    color: var(--secondary);
+    font-weight: 800;
+    color: var(--text-main);
 }
 
 .event-date-badge .month {
-    font-size: 0.65rem;
-    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--primary);
     text-transform: uppercase;
+}
+
+.event-info strong, .speaker-info strong {
+    font-size: 1.1rem;
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+.event-info p, .speaker-info p {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+}
+
+.talk-badge, .talk-info {
+    font-size: 0.75rem;
+    background: #eff6ff;
+    color: #2563eb;
+    padding: 2px 8px;
+    border-radius: 4px;
     font-weight: 600;
 }
 
-/* ---- Event Details ---- */
-.event-details {
-    overflow: hidden;
-    flex: 1;
-    min-width: 0;
-}
-
-.event-details strong {
-    font-size: 0.98rem;
-    display: block;
-    margin-bottom: 0.15rem;
-    color: var(--text-main);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-weight: 700;
-}
-
-.event-details p {
-    color: var(--text-dim);
-    font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-bottom: 0.1rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.event-details p i {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
-}
-
-.talk-info {
-    font-size: 0.72rem;
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    padding: 1px 7px;
-    border-radius: 5px;
-    display: inline-block;
-    color: var(--primary);
-    font-weight: 700;
-    margin-top: 0.2rem;
-}
-
-/* ---- Event Actions ---- */
-.event-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    flex-shrink: 0;
-}
-
-.group-row {
-    display: flex;
-    gap: 0.4rem;
-}
-
-/* ---- Countdown chip ---- */
 .countdown-chip {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    padding: 0.15rem 0.5rem;
+    background: #fffbeb;
+    color: #d97706;
+    padding: 4px 10px;
     border-radius: 6px;
-    background: rgba(251, 191, 36, 0.12);
-    color: var(--warning);
-    border: 1px solid rgba(251, 191, 36, 0.25);
-    white-space: nowrap;
 }
 
 .countdown-chip.urgent {
-    background: rgba(248, 113, 113, 0.12);
-    color: var(--danger);
-    border-color: rgba(248, 113, 113, 0.25);
-    animation: pulse-danger 2s infinite;
-}
-
-/* ---- Empty Group ---- */
-.event-group-label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-dim);
-    padding: 0.5rem 0.25rem 0.25rem;
-    border-bottom: 1px solid var(--glass-border);
-    margin-bottom: 0.5rem;
-}
-
-/* ---- Filter Row ---- */
-.filter-row {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    flex-wrap: wrap;
-}
-
-.filter-row input,
-.filter-row select {
-    flex: 1;
-    min-width: 100px;
-    padding: 0.55rem 0.75rem;
-    font-size: 0.85rem;
+    background: #fef2f2;
+    color: #dc2626;
 }

@@ -67,6 +67,17 @@ class Router {
 
     navigate(page, addToHistory = true) {
         try {
+            const [pageId, queryStr] = page.split('?');
+
+            // --- REDIRECT GUARD ---
+            const isAuth = AuthService.isAuthenticated();
+            if (!isAuth && pageId !== 'login') {
+                console.log("Protecting route: redirecting to login");
+                this.navigate('login', true);
+                return;
+            }
+            // ---------------------
+
             if (addToHistory) {
                 history.pushState({ page }, '', `#${page}`);
             }
@@ -75,7 +86,7 @@ class Router {
             const navButtons = document.querySelectorAll('.nav-btn');
             navButtons.forEach(btn => {
                 const id = btn.id;
-                if (id === `nav-${page}`) {
+                if (id === `nav-${pageId}`) {
                     btn.classList.add('active');
                 } else {
                     btn.classList.remove('active');
@@ -86,7 +97,6 @@ class Router {
             this.app.innerHTML = '';
 
             // Render Page
-            const [pageId, queryStr] = page.split('?');
             const params = new URLSearchParams(queryStr);
             const Component = this.routes[pageId] || this.routes.dashboard;
 
